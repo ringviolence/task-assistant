@@ -1,0 +1,75 @@
+"use client";
+
+import { useRef, useEffect } from "react";
+import type { ChatMessage as ChatMessageType } from "@/lib/types";
+import ChatMessage from "./ChatMessage";
+
+interface ChatPanelProps {
+  messages: ChatMessageType[];
+  onSend: (message: string) => void;
+  loading: boolean;
+}
+
+export default function ChatPanel({ messages, onSend, loading }: ChatPanelProps) {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const input = inputRef.current;
+    if (!input || !input.value.trim() || loading) return;
+    onSend(input.value.trim());
+    input.value = "";
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto p-4">
+        {messages.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-gray-500">
+            <p className="text-sm">What are you working on?</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {messages.map((msg, i) => (
+              <ChatMessage key={i} message={msg} />
+            ))}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-400">
+                  Thinking...
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </div>
+      <form
+        onSubmit={handleSubmit}
+        className="border-t border-gray-800 p-4"
+      >
+        <div className="flex gap-2">
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Type a message..."
+            disabled={loading}
+            className="flex-1 rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-sm text-gray-100 placeholder-gray-500 outline-none focus:border-blue-500 disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            Send
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
