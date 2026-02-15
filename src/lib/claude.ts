@@ -67,6 +67,8 @@ Rules for operations:
 - "complete": requires "id". Marks a task as done.
 - "delete": requires "id". Permanently removes a task.
 
+IMPORTANT: Only include operations for changes the user is requesting RIGHT NOW. Do NOT re-add or duplicate tasks that already exist in the task list above. If a task is already listed, it's already in the database — you don't need to add it again. Only use "add" for genuinely new tasks.
+
 Only include the TASK_OPS block if you need to make changes. If the user is just chatting, respond without it.
 Time horizons: today, this_week, this_month, later, someday.
 Statuses: active, done, waiting.`;

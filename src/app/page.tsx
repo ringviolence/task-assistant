@@ -34,11 +34,11 @@ export default function Home() {
           }),
         });
 
-        if (!res.ok) {
-          throw new Error(`API error: ${res.status}`);
-        }
+        const data = await res.json();
 
-        const data: ChatResponse = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error ?? `API error: ${res.status}`);
+        }
         const assistantMessage: ChatMessage = {
           role: "assistant",
           content: data.reply,
@@ -49,7 +49,9 @@ export default function Home() {
         console.error("Failed to send message:", error);
         const errorMessage: ChatMessage = {
           role: "assistant",
-          content: "Sorry, something went wrong. Please try again.",
+          content: error instanceof Error
+            ? `Error: ${error.message}`
+            : "Sorry, something went wrong. Please try again.",
         };
         setMessages((prev) => [...prev, errorMessage]);
       } finally {

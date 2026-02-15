@@ -33,8 +33,18 @@ export async function POST(request: Request) {
     const tasks = await getAllTasks();
 
     return NextResponse.json<ChatResponse>({ reply, tasks });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Chat API error:", error);
+
+    if (error instanceof Error && "status" in error) {
+      const apiError = error as { status: number; error?: { message?: string } };
+      const message = apiError.error?.message ?? error.message;
+      return NextResponse.json(
+        { error: message },
+        { status: apiError.status }
+      );
+    }
+
     return NextResponse.json(
       { error: "Failed to process message" },
       { status: 500 }

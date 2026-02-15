@@ -12,11 +12,18 @@ interface ChatPanelProps {
 
 export default function ChatPanel({ messages, onSend, loading }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  function autoResize() {
+    const ta = inputRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = `${ta.scrollHeight}px`;
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -24,6 +31,14 @@ export default function ChatPanel({ messages, onSend, loading }: ChatPanelProps)
     if (!input || !input.value.trim() || loading) return;
     onSend(input.value.trim());
     input.value = "";
+    input.style.height = "auto";
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && e.metaKey) {
+      e.preventDefault();
+      inputRef.current?.form?.requestSubmit();
+    }
   }
 
   return (
@@ -54,12 +69,15 @@ export default function ChatPanel({ messages, onSend, loading }: ChatPanelProps)
         className="border-t border-gray-800 p-4"
       >
         <div className="flex gap-2">
-          <input
+          <textarea
             ref={inputRef}
-            type="text"
+            rows={1}
             placeholder="Type a message..."
             disabled={loading}
-            className="flex-1 rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-sm text-gray-100 placeholder-gray-500 outline-none focus:border-blue-500 disabled:opacity-50"
+            onInput={autoResize}
+            onKeyDown={handleKeyDown}
+            className="flex-1 resize-none rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-sm text-gray-100 placeholder-gray-500 outline-none focus:border-blue-500 disabled:opacity-50"
+            style={{ maxHeight: "50vh" }}
           />
           <button
             type="submit"
