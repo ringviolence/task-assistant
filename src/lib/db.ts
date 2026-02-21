@@ -1,7 +1,7 @@
 import initSqlJs, { type Database } from "sql.js";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
-import type { Task, TaskRow, TaskOperation } from "./types";
+import type { Task, TaskRow, TaskOperation, Goals } from "./types";
 
 const DB_DIR = join(process.cwd(), "data");
 const DB_PATH = join(DB_DIR, "tasks.db");
@@ -42,6 +42,14 @@ async function getDb(): Promise<Database> {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS goals (
+      level TEXT PRIMARY KEY,
+      content TEXT NOT NULL DEFAULT ''
+    )
+  `);
+  db.run(`INSERT OR IGNORE INTO goals (level) VALUES ('right_now'), ('weekly'), ('quarterly')`);
 
   persist(db);
   globalForDb.__db = db;
@@ -134,6 +142,25 @@ export async function deleteTask(id: number): Promise<void> {
   persist(db);
 }
 
+export async function getGoals(): Promise<Goals> {
+  const db = await getDb();
+  const result = db.exec("SELECT level, content FROM goals");
+  const goals: Goals = { right_now: "", weekly: "", quarterly: "" };
+  if (result.length > 0) {
+    for (const row of result[0].values) {
+      const level = row[0] as keyof Goals;
+      goals[level] = row[1] as string;
+    }
+  }
+  return goals;
+}
+
+export async function setGoal(level: string, content: string): Promise<void> {
+  const db = await getDb();
+  db.run("UPDATE goals SET content = ? WHERE level = ?", [content, level]);
+  persist(db);
+}
+
 export async function applyOperations(ops: TaskOperation[]): Promise<void> {
   for (const op of ops) {
     switch (op.op) {
@@ -158,6 +185,9 @@ export async function applyOperations(ops: TaskOperation[]): Promise<void> {
         break;
       case "delete":
         if (op.id) await deleteTask(op.id);
+        break;
+      case "set_goals":
+        if (op.level && op.content !== undefined) await setGoal(op.level, op.content);
         break;
     }
   }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAllTasks, applyOperations } from "@/lib/db";
+import { getAllTasks, applyOperations, getGoals } from "@/lib/db";
 import { callClaude } from "@/lib/claude";
 import type { ChatRequest, ChatResponse } from "@/lib/types";
 
@@ -14,14 +14,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Get current tasks
+    // 1. Get current tasks and goals
     const currentTasks = await getAllTasks();
+    const goals = await getGoals();
 
-    // 2. Call Claude with message, history, and current tasks
+    // 2. Call Claude with message, history, current tasks, and goals
     const { reply, operations } = await callClaude(
       body.message,
       body.history ?? [],
-      currentTasks
+      currentTasks,
+      goals
     );
 
     // 3. Apply any task operations

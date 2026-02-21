@@ -20,7 +20,7 @@ export interface TaskRow {
   updated_at: string;
 }
 
-export type TaskOperationType = "add" | "update" | "complete" | "delete";
+export type TaskOperationType = "add" | "update" | "complete" | "delete" | "set_goals";
 
 export interface TaskOperation {
   op: TaskOperationType;
@@ -30,6 +30,14 @@ export interface TaskOperation {
   tags?: string[];
   time_horizon?: Task["time_horizon"];
   status?: Task["status"];
+  level?: "right_now" | "weekly" | "quarterly";
+  content?: string;
+}
+
+export interface Goals {
+  right_now: string;
+  weekly: string;
+  quarterly: string;
 }
 
 export interface ChatMessage {
