@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { Task } from "@/lib/types";
 
 const statusStyles: Record<Task["status"], string> = {
@@ -15,9 +18,13 @@ const horizonLabels: Record<Task["time_horizon"], string> = {
 };
 
 export default function TaskCard({ task }: { task: Task }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasDetails = task.description || task.tags.length > 0;
+
   return (
     <div
-      className={`rounded-lg border p-3 ${statusStyles[task.status]}`}
+      className={`rounded-lg border p-3 ${statusStyles[task.status]} ${hasDetails ? "cursor-pointer" : ""}`}
+      onClick={hasDetails ? () => setExpanded((v) => !v) : undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <h3
@@ -32,10 +39,10 @@ export default function TaskCard({ task }: { task: Task }) {
           <span className="shrink-0 text-xs text-green-600">done</span>
         )}
       </div>
-      {task.description && (
+      {expanded && task.description && (
         <p className="mt-1 text-xs text-gray-400">{task.description}</p>
       )}
-      {task.tags.length > 0 && (
+      {expanded && task.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {task.tags.map((tag) => (
             <span

@@ -66,7 +66,7 @@ export default function Home() {
       <div className="flex-1 border-r border-gray-800">
         <ChatPanel messages={messages} onSend={handleSend} loading={loading} />
       </div>
-      <div className="w-96 overflow-y-auto border-l border-gray-800">
+      <div className="w-[35%] overflow-y-auto border-l border-gray-800">
         <div className="border-b border-gray-800 px-4 py-3">
           <h1 className="text-sm font-semibold text-gray-300">Tasks</h1>
         </div>
