@@ -1,9 +1,23 @@
+export type TimeHorizon =
+  | "today"
+  | "tomorrow"
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday"
+  | "soon"
+  | "later"
+  | "someday";
+
 export interface Task {
   id: number;
   title: string;
   description: string | null;
   tags: string[];
-  time_horizon: "today" | "this_week" | "this_month" | "later" | "someday";
+  time_horizon: TimeHorizon;
   status: "active" | "done" | "waiting";
   created_at: string;
   updated_at: string;
@@ -28,7 +42,7 @@ export interface TaskOperation {
   title?: string;
   description?: string;
   tags?: string[];
-  time_horizon?: Task["time_horizon"];
+  time_horizon?: TimeHorizon;
   status?: Task["status"];
   level?: "right_now" | "weekly" | "quarterly";
   content?: string;
@@ -57,4 +71,10 @@ export interface ChatResponse {
 
 export interface TasksResponse {
   tasks: Task[];
+}
+
+export interface MaintenanceResult {
+  shifted: number;
+  overdue: number;
+  duplicates: Array<{ id1: number; title1: string; id2: number; title2: string }>;
 }

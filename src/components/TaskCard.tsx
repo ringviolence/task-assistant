@@ -9,14 +9,6 @@ const statusStyles: Record<Task["status"], string> = {
   waiting: "border-yellow-900 bg-gray-900",
 };
 
-const horizonLabels: Record<Task["time_horizon"], string> = {
-  today: "Today",
-  this_week: "This week",
-  this_month: "This month",
-  later: "Later",
-  someday: "Someday",
-};
-
 export default function TaskCard({ task }: { task: Task }) {
   const [expanded, setExpanded] = useState(false);
   const hasDetails = task.description || task.tags.length > 0;

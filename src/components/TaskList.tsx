@@ -1,31 +1,62 @@
 import type { Task } from "@/lib/types";
 import TaskCard from "./TaskCard";
 
-const HORIZON_ORDER: Task["time_horizon"][] = [
-  "today",
-  "this_week",
-  "this_month",
-  "later",
-  "someday",
+const DAY_NAMES = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+] as const;
+
+const MONTH_ABBR = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-const HORIZON_LABELS: Record<Task["time_horizon"], string> = {
-  today: "Today",
-  this_week: "This Week",
-  this_month: "This Month",
-  later: "Later",
-  someday: "Someday",
-};
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function buildHorizonConfig() {
+  const now = new Date();
+  const order: string[] = ["today", "tomorrow"];
+  const labels: Record<string, string> = {
+    today: "Today",
+    tomorrow: "Tomorrow",
+    soon: "Soon",
+    later: "Later",
+    someday: "Someday",
+  };
+
+  // Named days: offsets 2–6 from today
+  for (let i = 2; i <= 6; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() + i);
+    const name = DAY_NAMES[d.getDay()];
+    labels[name] = `${capitalize(name)} (${MONTH_ABBR[d.getMonth()]} ${d.getDate()})`;
+    order.push(name);
+  }
+
+  order.push("soon", "later", "someday");
+  return { order, labels };
+}
 
 export default function TaskList({ tasks }: { tasks: Task[] }) {
+  const { order, labels } = buildHorizonConfig();
+
   const activeTasks = tasks.filter((t) => t.status !== "done");
   const doneTasks = tasks.filter((t) => t.status === "done");
 
-  const grouped = HORIZON_ORDER.map((horizon) => ({
-    horizon,
-    label: HORIZON_LABELS[horizon],
-    tasks: activeTasks.filter((t) => t.time_horizon === horizon),
-  })).filter((g) => g.tasks.length > 0);
+  const grouped = order
+    .map((horizon) => ({
+      horizon,
+      label: labels[horizon] ?? capitalize(horizon),
+      tasks: activeTasks.filter((t) => t.time_horizon === horizon),
+    }))
+    .filter((g) => g.tasks.length > 0);
 
   if (tasks.length === 0) {
     return (

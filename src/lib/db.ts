@@ -1,7 +1,7 @@
 import initSqlJs, { type Database } from "sql.js";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
-import type { Task, TaskRow, TaskOperation, Goals } from "./types";
+import type { Task, TaskRow, TaskOperation, Goals, MaintenanceResult } from "./types";
 
 const DB_DIR = join(process.cwd(), "data");
 const DB_PATH = join(DB_DIR, "tasks.db");
@@ -51,6 +51,10 @@ async function getDb(): Promise<Database> {
   `);
   db.run(`INSERT OR IGNORE INTO goals (level) VALUES ('right_now'), ('weekly'), ('quarterly')`);
 
+  // Migrate old time_horizon values to new system
+  db.run("UPDATE tasks SET time_horizon = 'soon' WHERE time_horizon = 'this_week'");
+  db.run("UPDATE tasks SET time_horizon = 'later' WHERE time_horizon = 'this_month'");
+
   persist(db);
   globalForDb.__db = db;
   return db;
@@ -62,6 +66,62 @@ function persist(db: Database) {
   }
   const data = db.export();
   writeFileSync(DB_PATH, Buffer.from(data));
+}
+
+function countWhere(db: Database, horizon: string): number {
+  const stmt = db.prepare(
+    "SELECT COUNT(*) FROM tasks WHERE time_horizon = ? AND status NOT IN ('done', 'deleted')"
+  );
+  stmt.bind([horizon]);
+  stmt.step();
+  const row = stmt.getAsObject();
+  stmt.free();
+  return (Object.values(row)[0] as number) ?? 0;
+}
+
+function wordSet(title: string): Set<string> {
+  return new Set(
+    title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, "")
+      .split(/\s+/)
+      .filter((w) => w.length > 2)
+  );
+}
+
+function similarityScore(a: string, b: string): number {
+  const setA = wordSet(a);
+  const setB = wordSet(b);
+  if (setA.size === 0 || setB.size === 0) return 0;
+  const intersection = [...setA].filter((w) => setB.has(w)).length;
+  return intersection / Math.min(setA.size, setB.size);
+}
+
+function findDuplicates(
+  db: Database
+): Array<{ id1: number; title1: string; id2: number; title2: string }> {
+  const stmt = db.prepare("SELECT id, title FROM tasks WHERE status = 'active'");
+  const rows: { id: number; title: string }[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject() as { id: number; title: string };
+    rows.push(row);
+  }
+  stmt.free();
+
+  const pairs: Array<{ id1: number; title1: string; id2: number; title2: string }> = [];
+  for (let i = 0; i < rows.length; i++) {
+    for (let j = i + 1; j < rows.length; j++) {
+      if (similarityScore(rows[i].title, rows[j].title) > 0.6) {
+        pairs.push({
+          id1: rows[i].id,
+          title1: rows[i].title,
+          id2: rows[j].id,
+          title2: rows[j].title,
+        });
+      }
+    }
+  }
+  return pairs;
 }
 
 export async function getAllTasks(): Promise<Task[]> {
@@ -191,4 +251,58 @@ export async function applyOperations(ops: TaskOperation[]): Promise<void> {
         break;
     }
   }
+}
+
+export async function runMaintenance(): Promise<MaintenanceResult> {
+  const db = await getDb();
+
+  const DAY_NAMES = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
+  const todayIdx = new Date().getDay(); // 0=Sun … 6=Sat
+  const todayName = DAY_NAMES[todayIdx];
+
+  // 1. tomorrow → today
+  const tomorrowCount = countWhere(db, "tomorrow");
+  if (tomorrowCount > 0) {
+    db.run(
+      "UPDATE tasks SET time_horizon = 'today', updated_at = datetime('now') WHERE time_horizon = 'tomorrow' AND status NOT IN ('done', 'deleted')"
+    );
+  }
+
+  // 2. Named day that matches today → today
+  const todayNameCount = countWhere(db, todayName);
+  if (todayNameCount > 0) {
+    db.run(
+      "UPDATE tasks SET time_horizon = 'today', updated_at = datetime('now') WHERE time_horizon = ? AND status NOT IN ('done', 'deleted')",
+      [todayName]
+    );
+  }
+
+  // 3. Past named days (day index < today's) → today (overdue)
+  // e.g. if today is Thursday(4), then sunday(0), monday(1), tuesday(2), wednesday(3) are past
+  let overdueCount = 0;
+  const pastDays = DAY_NAMES.filter((_, idx) => idx < todayIdx);
+  for (const dayName of pastDays) {
+    const cnt = countWhere(db, dayName);
+    if (cnt > 0) {
+      db.run(
+        "UPDATE tasks SET time_horizon = 'today', updated_at = datetime('now') WHERE time_horizon = ? AND status NOT IN ('done', 'deleted')",
+        [dayName]
+      );
+      overdueCount += cnt;
+    }
+  }
+
+  // 4. Detect potential duplicate tasks
+  const duplicates = findDuplicates(db);
+
+  persist(db);
+  return { shifted: tomorrowCount + todayNameCount, overdue: overdueCount, duplicates };
 }
