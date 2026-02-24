@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { ChatMessage, Task, ChatResponse, TasksResponse, MaintenanceResult } from "@/lib/types";
 import ChatPanel from "@/components/ChatPanel";
 import TaskList from "@/components/TaskList";
+import SelectionReply from "@/components/SelectionReply";
 
 type MaintenanceStatus =
   | null
@@ -15,6 +16,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [maintenanceRunning, setMaintenanceRunning] = useState(false);
   const [maintenanceStatus, setMaintenanceStatus] = useState<MaintenanceStatus>(null);
+  const [quotedText, setQuotedText] = useState<string | null>(null);
 
   // Load tasks on mount
   useEffect(() => {
@@ -89,10 +91,19 @@ export default function Home() {
     }
   }, []);
 
+  const handleQuoteConsumed = useCallback(() => setQuotedText(null), []);
+
   return (
     <div className="flex h-screen">
+      <SelectionReply onReply={setQuotedText} />
       <div className="flex-1 border-r border-gray-800">
-        <ChatPanel messages={messages} onSend={handleSend} loading={loading} />
+        <ChatPanel
+          messages={messages}
+          onSend={handleSend}
+          loading={loading}
+          quotedText={quotedText}
+          onQuoteConsumed={handleQuoteConsumed}
+        />
       </div>
       <div className="w-[35%] overflow-y-auto border-l border-gray-800">
         <div className="border-b border-gray-800 px-4 py-3 flex items-center justify-between">

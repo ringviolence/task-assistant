@@ -8,15 +8,46 @@ interface ChatPanelProps {
   messages: ChatMessageType[];
   onSend: (message: string) => void;
   loading: boolean;
+  quotedText: string | null;
+  onQuoteConsumed: () => void;
 }
 
-export default function ChatPanel({ messages, onSend, loading }: ChatPanelProps) {
+export default function ChatPanel({
+  messages,
+  onSend,
+  loading,
+  quotedText,
+  onQuoteConsumed,
+}: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Focus input on mount and whenever loading finishes
+  useEffect(() => {
+    if (!loading) {
+      inputRef.current?.focus();
+    }
+  }, [loading]);
+
+  // Insert quoted text when a reply is triggered
+  useEffect(() => {
+    if (!quotedText) return;
+    const ta = inputRef.current;
+    if (!ta) return;
+
+    const lines = quotedText.split("\n");
+    const quote = lines.map((line) => `> ${line}`).join("\n") + "\n\n";
+    const existing = ta.value;
+    ta.value = quote + existing;
+    autoResize();
+    ta.focus();
+    ta.setSelectionRange(quote.length, quote.length);
+    onQuoteConsumed();
+  }, [quotedText, onQuoteConsumed]);
 
   function autoResize() {
     const ta = inputRef.current;
@@ -64,10 +95,7 @@ export default function ChatPanel({ messages, onSend, loading }: ChatPanelProps)
           </div>
         )}
       </div>
-      <form
-        onSubmit={handleSubmit}
-        className="border-t border-gray-800 p-4"
-      >
+      <form onSubmit={handleSubmit} className="border-t border-gray-800 p-4">
         <div className="flex gap-2">
           <textarea
             ref={inputRef}

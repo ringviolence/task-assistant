@@ -14,22 +14,30 @@ export default function TaskCard({ task }: { task: Task }) {
   const hasDetails = task.description || task.tags.length > 0;
 
   return (
-    <div
-      className={`rounded-lg border p-3 ${statusStyles[task.status]} ${hasDetails ? "cursor-pointer" : ""}`}
-      onClick={hasDetails ? () => setExpanded((v) => !v) : undefined}
-    >
+    <div className={`rounded-lg border p-3 ${statusStyles[task.status]}`}>
       <div className="flex items-start justify-between gap-2">
         <h3
-          className={`text-sm font-medium ${task.status === "done" ? "line-through text-gray-500" : "text-gray-100"}`}
+          className={`text-sm font-medium flex-1 min-w-0 ${task.status === "done" ? "line-through text-gray-500" : "text-gray-100"}`}
         >
           {task.title}
         </h3>
-        {task.status === "waiting" && (
-          <span className="shrink-0 text-xs text-yellow-500">waiting</span>
-        )}
-        {task.status === "done" && (
-          <span className="shrink-0 text-xs text-green-600">done</span>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {task.status === "waiting" && (
+            <span className="text-xs text-yellow-500">waiting</span>
+          )}
+          {task.status === "done" && (
+            <span className="text-xs text-green-600">done</span>
+          )}
+          {hasDetails && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="text-gray-600 hover:text-gray-400 text-sm leading-none"
+              title={expanded ? "Collapse" : "Expand"}
+            >
+              ···
+            </button>
+          )}
+        </div>
       </div>
       {expanded && task.description && (
         <p className="mt-1 text-xs text-gray-400">{task.description}</p>
