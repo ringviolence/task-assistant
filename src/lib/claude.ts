@@ -22,7 +22,7 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function buildSystemPrompt(tasks: Task[], goals: Goals): string {
+export function buildSystemPrompt(tasks: Task[], goals: Goals): string {
   const now = new Date();
   const todayIdx = now.getDay(); // 0=Sun
 
@@ -59,6 +59,7 @@ function buildSystemPrompt(tasks: Task[], goals: Goals): string {
     const parts = [`  [${t.id}] ${t.title}`];
     if (t.description) parts.push(`      ${t.description}`);
     if (t.tags.length > 0) parts.push(`      tags: ${t.tags.join(", ")}`);
+    if (t.source && t.source !== "chat") parts.push(`      source: ${t.source}`);
     return parts.join("\n");
   };
 

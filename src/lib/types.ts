@@ -19,6 +19,7 @@ export interface Task {
   tags: string[];
   time_horizon: TimeHorizon;
   status: "active" | "done" | "waiting";
+  source: string;
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +31,7 @@ export interface TaskRow {
   tags: string; // JSON string
   time_horizon: string;
   status: string;
+  source: string;
   created_at: string;
   updated_at: string;
 }

@@ -18,6 +18,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     tags: JSON.parse(row.tags as string),
     time_horizon: row.time_horizon as Task["time_horizon"],
     status: row.status as Task["status"],
+    source: (row.source as string | null) ?? "chat",
     created_at: created instanceof Date ? created.toISOString() : String(created),
     updated_at: updated instanceof Date ? updated.toISOString() : String(updated),
   };
@@ -51,12 +52,13 @@ export async function addTask(
   title: string,
   description?: string | null,
   tags?: string[],
-  time_horizon?: Task["time_horizon"]
+  time_horizon?: Task["time_horizon"],
+  source?: string
 ): Promise<Task> {
   const sql = getDb();
   const rows = await sql`
-    INSERT INTO tasks (title, description, tags, time_horizon)
-    VALUES (${title}, ${description ?? null}, ${JSON.stringify(tags ?? [])}, ${time_horizon ?? "later"})
+    INSERT INTO tasks (title, description, tags, time_horizon, source)
+    VALUES (${title}, ${description ?? null}, ${JSON.stringify(tags ?? [])}, ${time_horizon ?? "later"}, ${source ?? "chat"})
     RETURNING *
   `;
   return rowToTask(rows[0] as Record<string, unknown>);
@@ -125,12 +127,12 @@ export async function setGoal(level: string, content: string): Promise<void> {
   await sql`UPDATE goals SET content = ${content} WHERE level = ${level}`;
 }
 
-export async function applyOperations(ops: TaskOperation[]): Promise<void> {
+export async function applyOperations(ops: TaskOperation[], source?: string): Promise<void> {
   for (const op of ops) {
     switch (op.op) {
       case "add":
         if (op.title) {
-          await addTask(op.title, op.description, op.tags, op.time_horizon);
+          await addTask(op.title, op.description, op.tags, op.time_horizon, source);
         }
         break;
       case "update":

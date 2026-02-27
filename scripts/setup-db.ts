@@ -25,9 +25,14 @@ async function setup() {
       tags        TEXT NOT NULL DEFAULT '[]',
       time_horizon TEXT NOT NULL DEFAULT 'later',
       status      TEXT NOT NULL DEFAULT 'active',
+      source      TEXT NOT NULL DEFAULT 'chat',
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+  // Migrate existing databases that don't have the source column yet
+  await sql`
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'chat'
   `;
   console.log("✓ tasks table ready");
 

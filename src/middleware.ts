@@ -32,6 +32,12 @@ export async function middleware(request: NextRequest) {
     if (cronSecret && authHeader === `Bearer ${cronSecret}`) return NextResponse.next();
   }
 
+  // Ingest endpoint accepts API key auth
+  if (pathname === "/api/ingest") {
+    const apiKey = request.headers.get("x-api-key") ?? undefined;
+    if (validateApiKey(apiKey)) return NextResponse.next();
+  }
+
   // Unauthorized — return JSON for API routes, redirect to login for pages
   if (isApiRoute) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
