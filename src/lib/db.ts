@@ -1,82 +1,26 @@
-import initSqlJs, { type Database } from "sql.js";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
-import { join } from "path";
-import type { Task, TaskRow, TaskOperation, Goals, MaintenanceResult } from "./types";
+import { neon } from "@neondatabase/serverless";
+import type { Task, TaskOperation, Goals, MaintenanceResult } from "./types";
 
-const DB_DIR = join(process.cwd(), "data");
-const DB_PATH = join(DB_DIR, "tasks.db");
+function getDb() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL environment variable is not set");
+  }
+  return neon(process.env.DATABASE_URL);
+}
 
-const globalForDb = globalThis as unknown as { __db: Database | undefined };
-
-function rowToTask(row: TaskRow): Task {
+function rowToTask(row: Record<string, unknown>): Task {
+  const created = row.created_at;
+  const updated = row.updated_at;
   return {
-    ...row,
-    tags: JSON.parse(row.tags),
+    id: row.id as number,
+    title: row.title as string,
+    description: (row.description as string | null) ?? null,
+    tags: JSON.parse(row.tags as string),
     time_horizon: row.time_horizon as Task["time_horizon"],
     status: row.status as Task["status"],
+    created_at: created instanceof Date ? created.toISOString() : String(created),
+    updated_at: updated instanceof Date ? updated.toISOString() : String(updated),
   };
-}
-
-async function getDb(): Promise<Database> {
-  if (globalForDb.__db) return globalForDb.__db;
-
-  const SQL = await initSqlJs();
-
-  let db: Database;
-  if (existsSync(DB_PATH)) {
-    const buf = readFileSync(DB_PATH);
-    db = new SQL.Database(buf);
-  } else {
-    db = new SQL.Database();
-  }
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS tasks (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      description TEXT,
-      tags TEXT NOT NULL DEFAULT '[]',
-      time_horizon TEXT NOT NULL DEFAULT 'later',
-      status TEXT NOT NULL DEFAULT 'active',
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS goals (
-      level TEXT PRIMARY KEY,
-      content TEXT NOT NULL DEFAULT ''
-    )
-  `);
-  db.run(`INSERT OR IGNORE INTO goals (level) VALUES ('right_now'), ('weekly'), ('quarterly')`);
-
-  // Migrate old time_horizon values to new system
-  db.run("UPDATE tasks SET time_horizon = 'soon' WHERE time_horizon = 'this_week'");
-  db.run("UPDATE tasks SET time_horizon = 'later' WHERE time_horizon = 'this_month'");
-
-  persist(db);
-  globalForDb.__db = db;
-  return db;
-}
-
-function persist(db: Database) {
-  if (!existsSync(DB_DIR)) {
-    mkdirSync(DB_DIR, { recursive: true });
-  }
-  const data = db.export();
-  writeFileSync(DB_PATH, Buffer.from(data));
-}
-
-function countWhere(db: Database, horizon: string): number {
-  const stmt = db.prepare(
-    "SELECT COUNT(*) FROM tasks WHERE time_horizon = ? AND status NOT IN ('done', 'deleted')"
-  );
-  stmt.bind([horizon]);
-  stmt.step();
-  const row = stmt.getAsObject();
-  stmt.free();
-  return (Object.values(row)[0] as number) ?? 0;
 }
 
 function wordSet(title: string): Set<string> {
@@ -97,42 +41,10 @@ function similarityScore(a: string, b: string): number {
   return intersection / Math.min(setA.size, setB.size);
 }
 
-function findDuplicates(
-  db: Database
-): Array<{ id1: number; title1: string; id2: number; title2: string }> {
-  const stmt = db.prepare("SELECT id, title FROM tasks WHERE status = 'active'");
-  const rows: { id: number; title: string }[] = [];
-  while (stmt.step()) {
-    const row = stmt.getAsObject() as { id: number; title: string };
-    rows.push(row);
-  }
-  stmt.free();
-
-  const pairs: Array<{ id1: number; title1: string; id2: number; title2: string }> = [];
-  for (let i = 0; i < rows.length; i++) {
-    for (let j = i + 1; j < rows.length; j++) {
-      if (similarityScore(rows[i].title, rows[j].title) > 0.6) {
-        pairs.push({
-          id1: rows[i].id,
-          title1: rows[i].title,
-          id2: rows[j].id,
-          title2: rows[j].title,
-        });
-      }
-    }
-  }
-  return pairs;
-}
-
 export async function getAllTasks(): Promise<Task[]> {
-  const db = await getDb();
-  const stmt = db.prepare("SELECT * FROM tasks WHERE status != 'deleted' ORDER BY id");
-  const tasks: Task[] = [];
-  while (stmt.step()) {
-    tasks.push(rowToTask(stmt.getAsObject() as unknown as TaskRow));
-  }
-  stmt.free();
-  return tasks;
+  const sql = getDb();
+  const rows = await sql`SELECT * FROM tasks WHERE status != 'deleted' ORDER BY id`;
+  return rows.map((row) => rowToTask(row as Record<string, unknown>));
 }
 
 export async function addTask(
@@ -141,55 +53,51 @@ export async function addTask(
   tags?: string[],
   time_horizon?: Task["time_horizon"]
 ): Promise<Task> {
-  const db = await getDb();
-  db.run(
-    "INSERT INTO tasks (title, description, tags, time_horizon) VALUES (?, ?, ?, ?)",
-    [title, description ?? null, JSON.stringify(tags ?? []), time_horizon ?? "later"]
-  );
-  const id = db.exec("SELECT last_insert_rowid() as id")[0].values[0][0] as number;
-  persist(db);
-  const stmt = db.prepare("SELECT * FROM tasks WHERE id = ?");
-  stmt.bind([id]);
-  stmt.step();
-  const task = rowToTask(stmt.getAsObject() as unknown as TaskRow);
-  stmt.free();
-  return task;
+  const sql = getDb();
+  const rows = await sql`
+    INSERT INTO tasks (title, description, tags, time_horizon)
+    VALUES (${title}, ${description ?? null}, ${JSON.stringify(tags ?? [])}, ${time_horizon ?? "later"})
+    RETURNING *
+  `;
+  return rowToTask(rows[0] as Record<string, unknown>);
 }
 
 export async function updateTask(
   id: number,
   fields: Partial<Pick<Task, "title" | "description" | "tags" | "time_horizon" | "status">>
 ): Promise<void> {
-  const db = await getDb();
+  const sql = getDb();
   const sets: string[] = [];
-  const vals: (string | null)[] = [];
+  const vals: (string | number | null)[] = [];
 
   if (fields.title !== undefined) {
-    sets.push("title = ?");
+    sets.push(`title = $${vals.length + 1}`);
     vals.push(fields.title);
   }
   if (fields.description !== undefined) {
-    sets.push("description = ?");
+    sets.push(`description = $${vals.length + 1}`);
     vals.push(fields.description ?? null);
   }
   if (fields.tags !== undefined) {
-    sets.push("tags = ?");
+    sets.push(`tags = $${vals.length + 1}`);
     vals.push(JSON.stringify(fields.tags));
   }
   if (fields.time_horizon !== undefined) {
-    sets.push("time_horizon = ?");
+    sets.push(`time_horizon = $${vals.length + 1}`);
     vals.push(fields.time_horizon);
   }
   if (fields.status !== undefined) {
-    sets.push("status = ?");
+    sets.push(`status = $${vals.length + 1}`);
     vals.push(fields.status);
   }
 
   if (sets.length === 0) return;
-  sets.push("updated_at = datetime('now')");
-  vals.push(String(id));
-  db.run(`UPDATE tasks SET ${sets.join(", ")} WHERE id = ?`, vals);
-  persist(db);
+  sets.push("updated_at = NOW()");
+  vals.push(id);
+  await sql.query(
+    `UPDATE tasks SET ${sets.join(", ")} WHERE id = $${vals.length}`,
+    vals
+  );
 }
 
 export async function completeTask(id: number): Promise<void> {
@@ -197,28 +105,24 @@ export async function completeTask(id: number): Promise<void> {
 }
 
 export async function deleteTask(id: number): Promise<void> {
-  const db = await getDb();
-  db.run("DELETE FROM tasks WHERE id = ?", [id]);
-  persist(db);
+  const sql = getDb();
+  await sql`DELETE FROM tasks WHERE id = ${id}`;
 }
 
 export async function getGoals(): Promise<Goals> {
-  const db = await getDb();
-  const result = db.exec("SELECT level, content FROM goals");
+  const sql = getDb();
+  const rows = await sql`SELECT level, content FROM goals`;
   const goals: Goals = { right_now: "", weekly: "", quarterly: "" };
-  if (result.length > 0) {
-    for (const row of result[0].values) {
-      const level = row[0] as keyof Goals;
-      goals[level] = row[1] as string;
-    }
+  for (const row of rows) {
+    const level = row.level as keyof Goals;
+    goals[level] = row.content as string;
   }
   return goals;
 }
 
 export async function setGoal(level: string, content: string): Promise<void> {
-  const db = await getDb();
-  db.run("UPDATE goals SET content = ? WHERE level = ?", [content, level]);
-  persist(db);
+  const sql = getDb();
+  await sql`UPDATE goals SET content = ${content} WHERE level = ${level}`;
 }
 
 export async function applyOperations(ops: TaskOperation[]): Promise<void> {
@@ -254,7 +158,7 @@ export async function applyOperations(ops: TaskOperation[]): Promise<void> {
 }
 
 export async function runMaintenance(): Promise<MaintenanceResult> {
-  const db = await getDb();
+  const sql = getDb();
 
   const DAY_NAMES = [
     "sunday",
@@ -265,44 +169,69 @@ export async function runMaintenance(): Promise<MaintenanceResult> {
     "friday",
     "saturday",
   ];
-  const todayIdx = new Date().getDay(); // 0=Sun … 6=Sat
+  const todayIdx = new Date().getDay();
   const todayName = DAY_NAMES[todayIdx];
 
+  async function countWhere(horizon: string): Promise<number> {
+    const result = await sql`
+      SELECT COUNT(*) as count FROM tasks
+      WHERE time_horizon = ${horizon} AND status NOT IN ('done', 'deleted')
+    `;
+    return Number(result[0].count);
+  }
+
   // 1. tomorrow → today
-  const tomorrowCount = countWhere(db, "tomorrow");
+  const tomorrowCount = await countWhere("tomorrow");
   if (tomorrowCount > 0) {
-    db.run(
-      "UPDATE tasks SET time_horizon = 'today', updated_at = datetime('now') WHERE time_horizon = 'tomorrow' AND status NOT IN ('done', 'deleted')"
-    );
+    await sql`
+      UPDATE tasks SET time_horizon = 'today', updated_at = NOW()
+      WHERE time_horizon = 'tomorrow' AND status NOT IN ('done', 'deleted')
+    `;
   }
 
   // 2. Named day that matches today → today
-  const todayNameCount = countWhere(db, todayName);
+  const todayNameCount = await countWhere(todayName);
   if (todayNameCount > 0) {
-    db.run(
-      "UPDATE tasks SET time_horizon = 'today', updated_at = datetime('now') WHERE time_horizon = ? AND status NOT IN ('done', 'deleted')",
-      [todayName]
-    );
+    await sql`
+      UPDATE tasks SET time_horizon = 'today', updated_at = NOW()
+      WHERE time_horizon = ${todayName} AND status NOT IN ('done', 'deleted')
+    `;
   }
 
   // 3. Past named days (day index < today's) → today (overdue)
-  // e.g. if today is Thursday(4), then sunday(0), monday(1), tuesday(2), wednesday(3) are past
   let overdueCount = 0;
   const pastDays = DAY_NAMES.filter((_, idx) => idx < todayIdx);
   for (const dayName of pastDays) {
-    const cnt = countWhere(db, dayName);
+    const cnt = await countWhere(dayName);
     if (cnt > 0) {
-      db.run(
-        "UPDATE tasks SET time_horizon = 'today', updated_at = datetime('now') WHERE time_horizon = ? AND status NOT IN ('done', 'deleted')",
-        [dayName]
-      );
+      await sql`
+        UPDATE tasks SET time_horizon = 'today', updated_at = NOW()
+        WHERE time_horizon = ${dayName} AND status NOT IN ('done', 'deleted')
+      `;
       overdueCount += cnt;
     }
   }
 
   // 4. Detect potential duplicate tasks
-  const duplicates = findDuplicates(db);
+  const activeRows = await sql`SELECT id, title FROM tasks WHERE status = 'active'`;
+  const rows = activeRows.map((r) => ({
+    id: r.id as number,
+    title: r.title as string,
+  }));
 
-  persist(db);
-  return { shifted: tomorrowCount + todayNameCount, overdue: overdueCount, duplicates };
+  const pairs: Array<{ id1: number; title1: string; id2: number; title2: string }> = [];
+  for (let i = 0; i < rows.length; i++) {
+    for (let j = i + 1; j < rows.length; j++) {
+      if (similarityScore(rows[i].title, rows[j].title) > 0.6) {
+        pairs.push({
+          id1: rows[i].id,
+          title1: rows[i].title,
+          id2: rows[j].id,
+          title2: rows[j].title,
+        });
+      }
+    }
+  }
+
+  return { shifted: tomorrowCount + todayNameCount, overdue: overdueCount, duplicates: pairs };
 }
