@@ -22,12 +22,14 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Maintenance endpoint also accepts API key (for future cron jobs)
+  // Maintenance endpoint also accepts API key or Vercel Cron secret
   if (pathname === "/api/maintenance") {
     const apiKey = request.headers.get("x-api-key") ?? undefined;
-    if (validateApiKey(apiKey)) {
-      return NextResponse.next();
-    }
+    if (validateApiKey(apiKey)) return NextResponse.next();
+
+    const cronSecret = process.env.CRON_SECRET;
+    const authHeader = request.headers.get("authorization");
+    if (cronSecret && authHeader === `Bearer ${cronSecret}`) return NextResponse.next();
   }
 
   // Unauthorized — return JSON for API routes, redirect to login for pages
