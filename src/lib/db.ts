@@ -176,6 +176,13 @@ export async function applyOperations(ops: TaskOperation[], source?: string): Pr
 export async function runMaintenance(): Promise<MaintenanceResult> {
   const sql = getDb();
 
+  // Idempotency guard: only run once per calendar day (UTC)
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const lastShift = await getConfig("last_shift_date");
+  if (lastShift === today) {
+    return { shifted: 0, overdue: 0, duplicates: [] };
+  }
+
   const DAY_NAMES = [
     "sunday",
     "monday",
@@ -249,5 +256,6 @@ export async function runMaintenance(): Promise<MaintenanceResult> {
     }
   }
 
+  await setConfig("last_shift_date", today);
   return { shifted: tomorrowCount + todayNameCount, overdue: overdueCount, duplicates: pairs };
 }
