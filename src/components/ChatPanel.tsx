@@ -151,6 +151,7 @@ export default function ChatPanel({
           <textarea
             ref={inputRef}
             rows={1}
+            autoFocus
             placeholder="Type a message..."
             disabled={loading}
             onInput={autoResize}
