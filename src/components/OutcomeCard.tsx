@@ -32,6 +32,7 @@ export default function OutcomeCard({
           )}
           {onReference && (
             <button
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => onReference(outcome)}
               className="text-gray-600 hover:text-gray-300 text-xs leading-none"
               title="Reference in chat"

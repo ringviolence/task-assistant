@@ -41,6 +41,7 @@ export default function TaskCard({
           )}
           {onReference && (
             <button
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => onReference(task)}
               className="text-gray-600 hover:text-gray-300 text-xs leading-none"
               title="Reference in chat"
