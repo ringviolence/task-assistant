@@ -11,16 +11,21 @@ const statusStyles: Record<Task["status"], string> = {
 
 export default function TaskCard({
   task,
+  outcomeColor,
   onReference,
 }: {
   task: Task;
+  outcomeColor?: string;
   onReference?: (task: Task) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const hasDetails = task.description || task.tags.length > 0;
 
   return (
-    <div className={`rounded-lg border p-3 ${statusStyles[task.status]}`}>
+    <div
+      className={`rounded-lg border p-3 ${statusStyles[task.status]}`}
+      style={outcomeColor ? { backgroundColor: `${outcomeColor}22` } : undefined}
+    >
       <div className="flex items-start justify-between gap-2">
         <h3
           className={`text-sm font-medium flex-1 min-w-0 ${task.status === "done" ? "line-through text-gray-500" : "text-gray-100"}`}

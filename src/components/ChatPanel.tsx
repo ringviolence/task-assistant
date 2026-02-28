@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import type { ChatMessage as ChatMessageType, Task } from "@/lib/types";
+import type { ChatMessage as ChatMessageType, Task, OutcomeWithTasks } from "@/lib/types";
 import ChatMessage from "./ChatMessage";
 
 interface ChatPanelProps {
@@ -12,6 +12,8 @@ interface ChatPanelProps {
   onQuoteConsumed: () => void;
   referencedTasks: Task[];
   onRemoveReference: (id: number) => void;
+  referencedOutcomes: OutcomeWithTasks[];
+  onRemoveOutcomeReference: (id: number) => void;
 }
 
 export default function ChatPanel({
@@ -22,6 +24,8 @@ export default function ChatPanel({
   onQuoteConsumed,
   referencedTasks,
   onRemoveReference,
+  referencedOutcomes,
+  onRemoveOutcomeReference,
 }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -76,6 +80,8 @@ export default function ChatPanel({
     }
   }
 
+  const hasChips = referencedTasks.length > 0 || referencedOutcomes.length > 0;
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-y-auto p-4">
@@ -100,12 +106,12 @@ export default function ChatPanel({
         )}
       </div>
       <form onSubmit={handleSubmit} className="border-t border-gray-800 p-4">
-        {referencedTasks.length > 0 && (
+        {hasChips && (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {referencedTasks.map((task) => (
               <span
-                key={task.id}
-                className="flex items-center gap-1 rounded-full bg-blue-900/50 border border-blue-700/50 px-2.5 py-1 text-xs text-blue-300"
+                key={`task-${task.id}`}
+                className="flex items-center gap-1 rounded-full border bg-blue-900/40 border-blue-700/50 px-2.5 py-1 text-xs text-blue-300"
               >
                 <span className="max-w-[180px] truncate">{task.title}</span>
                 <button
@@ -113,6 +119,27 @@ export default function ChatPanel({
                   onClick={() => onRemoveReference(task.id)}
                   className="text-blue-400 hover:text-blue-200 leading-none ml-0.5"
                   aria-label="Remove reference"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            {referencedOutcomes.map((outcome) => (
+              <span
+                key={`outcome-${outcome.id}`}
+                className="flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs"
+                style={{
+                  backgroundColor: `${outcome.color}22`,
+                  borderColor: `${outcome.color}55`,
+                  color: outcome.color,
+                }}
+              >
+                <span className="max-w-[180px] truncate">{outcome.title}</span>
+                <button
+                  type="button"
+                  onClick={() => onRemoveOutcomeReference(outcome.id)}
+                  className="leading-none ml-0.5 opacity-70 hover:opacity-100"
+                  aria-label="Remove outcome reference"
                 >
                   ×
                 </button>

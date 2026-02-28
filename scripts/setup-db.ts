@@ -74,6 +74,23 @@ async function setup() {
   `;
   console.log("✓ config seeded");
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS outcomes (
+      id                 SERIAL PRIMARY KEY,
+      title              TEXT NOT NULL,
+      definition_of_done TEXT,
+      description        TEXT,
+      color              TEXT NOT NULL DEFAULT '#B5D8EB',
+      status             TEXT NOT NULL DEFAULT 'active',
+      created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  console.log("✓ outcomes table ready");
+
+  await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS outcome_id INTEGER`;
+  console.log("✓ tasks.outcome_id column ready");
+
   console.log("\nDatabase setup complete.");
 }
 

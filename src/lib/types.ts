@@ -20,6 +20,7 @@ export interface Task {
   time_horizon: TimeHorizon;
   status: "active" | "done" | "waiting";
   source: string;
+  outcome_id: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -32,28 +33,53 @@ export interface TaskRow {
   time_horizon: string;
   status: string;
   source: string;
+  outcome_id: number | null;
   created_at: string;
   updated_at: string;
 }
 
-export type TaskOperationType = "add" | "update" | "complete" | "delete" | "set_goals";
+export interface Outcome {
+  id: number;
+  title: string;
+  definition_of_done: string | null;
+  description: string | null;
+  color: string;
+  status: "active" | "done";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutcomeWithTasks extends Outcome {
+  tasks: Task[];
+}
+
+export type TaskOperationType =
+  | "add"
+  | "update"
+  | "complete"
+  | "delete"
+  | "create_outcome"
+  | "update_outcome"
+  | "close_outcome"
+  | "delete_outcome"
+  | "link_task"
+  | "unlink_task";
 
 export interface TaskOperation {
   op: TaskOperationType;
+  // shared id (task id for task ops; outcome id for outcome ops)
   id?: number;
+  // task fields
   title?: string;
-  description?: string;
+  description?: string | null;
   tags?: string[];
   time_horizon?: TimeHorizon;
   status?: Task["status"];
-  level?: "right_now" | "weekly" | "quarterly";
-  content?: string;
-}
-
-export interface Goals {
-  right_now: string;
-  weekly: string;
-  quarterly: string;
+  outcome_id?: number | null;
+  // outcome-specific fields
+  definition_of_done?: string | null;
+  // link / unlink
+  task_id?: number;
 }
 
 export interface ChatMessage {
@@ -65,15 +91,21 @@ export interface ChatRequest {
   message: string;
   history: ChatMessage[];
   referencedTasks?: Task[];
+  referencedOutcomes?: OutcomeWithTasks[];
 }
 
 export interface ChatResponse {
   reply: string;
   tasks: Task[];
+  outcomes: OutcomeWithTasks[];
 }
 
 export interface TasksResponse {
   tasks: Task[];
+}
+
+export interface OutcomesResponse {
+  outcomes: OutcomeWithTasks[];
 }
 
 export interface MaintenanceResult {

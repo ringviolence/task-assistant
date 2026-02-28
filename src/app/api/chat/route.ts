@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAllTasks, applyOperations, getGoals, getConfig } from "@/lib/db";
+import { getAllTasks, getAllOutcomes, applyOperations, getConfig } from "@/lib/db";
 import { callClaude } from "@/lib/claude";
 import type { ChatRequest, ChatResponse } from "@/lib/types";
 
@@ -14,30 +14,27 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Get goals and user context
-    const [goals, userContext] = await Promise.all([
-      getGoals(),
-      getConfig("user_context"),
-    ]);
+    // 1. Get user context
+    const userContext = await getConfig("user_context");
 
-    // 2. Call Claude with message, history, referenced tasks, goals, and context
+    // 2. Call Claude with message, history, referenced tasks/outcomes, and context
     const { reply, operations } = await callClaude(
       body.message,
       body.history ?? [],
       body.referencedTasks ?? [],
-      goals,
+      body.referencedOutcomes ?? [],
       userContext
     );
 
-    // 3. Apply any task operations
+    // 3. Apply any task/outcome operations
     if (operations.length > 0) {
       await applyOperations(operations);
     }
 
-    // 4. Fetch updated tasks
-    const tasks = await getAllTasks();
+    // 4. Fetch updated tasks and outcomes
+    const [tasks, outcomes] = await Promise.all([getAllTasks(), getAllOutcomes()]);
 
-    return NextResponse.json<ChatResponse>({ reply, tasks });
+    return NextResponse.json<ChatResponse>({ reply, tasks, outcomes });
   } catch (error: unknown) {
     console.error("Chat API error:", error);
 

@@ -46,9 +46,11 @@ function buildHorizonConfig() {
 
 export default function TaskList({
   tasks,
+  outcomeColors = {},
   onReference,
 }: {
   tasks: Task[];
+  outcomeColors?: Record<number, string>;
   onReference?: (task: Task) => void;
 }) {
   const { order, labels } = buildHorizonConfig();
@@ -82,7 +84,12 @@ export default function TaskList({
           </h2>
           <div className="flex flex-col gap-2">
             {groupTasks.map((task) => (
-              <TaskCard key={task.id} task={task} onReference={onReference} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                outcomeColor={task.outcome_id != null ? outcomeColors[task.outcome_id] : undefined}
+                onReference={onReference}
+              />
             ))}
           </div>
         </div>
@@ -94,7 +101,12 @@ export default function TaskList({
           </h2>
           <div className="flex flex-col gap-2">
             {doneTasks.map((task) => (
-              <TaskCard key={task.id} task={task} onReference={onReference} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                outcomeColor={task.outcome_id != null ? outcomeColors[task.outcome_id] : undefined}
+                onReference={onReference}
+              />
             ))}
           </div>
         </div>

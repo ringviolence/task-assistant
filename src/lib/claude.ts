@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { Task, ChatMessage, TaskOperation, Goals } from "./types";
+import type { Task, OutcomeWithTasks, ChatMessage, TaskOperation } from "./types";
 
 const anthropic = new Anthropic();
 
@@ -22,7 +22,7 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export function buildSystemPrompt(goals: Goals, userContext: string): string {
+export function buildSystemPrompt(userContext: string): string {
   const now = new Date();
 
   // Named days: the 5 days after tomorrow (offsets 2–6 from today)
@@ -57,21 +57,10 @@ export function buildSystemPrompt(goals: Goals, userContext: string): string {
 
 Today is: ${dateTime}.${contextSection}
 
-## Current Priorities
-
-### Right now
-${goals.right_now || "(not set)"}
-
-### Weekly goals
-${goals.weekly || "(not set)"}
-
-### Quarterly goals
-${goals.quarterly || "(not set)"}
-
 ## Your Behavior
 
 ### New tasks (no referenced tasks attached)
-When a message has no referenced tasks, treat it as new task capture or general conversation.
+When a message has no referenced tasks or outcomes, treat it as new task capture or general conversation.
 - If it sounds like a task, add it. Synthesize messy input into a clean title and description.
 - Assign reasonable time_horizon and tags based on context.
 - Don't ask clarifying questions unless something is completely unintelligible.
@@ -82,6 +71,19 @@ When tasks are attached to a message, the user wants to discuss or update those 
 - Never create a duplicate of a referenced task — update it instead.
 - The user might say "this is done" (complete it), "move this to Friday" (update time_horizon), "actually this should be tagged hiring" (update tags), or just want to discuss it.
 
+### Outcomes
+Outcomes are meaningful milestones with a definition of done. Tasks can be linked to outcomes.
+
+When an outcome is referenced:
+- Discuss before making changes. Explore, suggest, think through implications with the user.
+- Only emit outcome operations (create, update, close, split) when the user confirms or explicitly asks for the update.
+- When the user describes splitting an outcome, create new outcomes and reassign tasks as discussed.
+- When the user references multiple outcomes for merging/reorganizing, wait for confirmation before restructuring.
+
+When tasks are referenced and the user says to assign them to an outcome, use the outcome's title or context to identify which outcome — since there are typically few active outcomes, fuzzy matching is fine here.
+
+Creating outcomes: When the user describes a new milestone or workstream, create an outcome. Tasks can be linked at creation or later.
+
 ### Tone
 - Be concise and direct. Acknowledge what you did briefly.
 - Don't be overly chatty or ask unnecessary follow-up questions.
@@ -89,31 +91,41 @@ When tasks are attached to a message, the user wants to discuss or update those 
 ### Hard Deadlines
 Most dates mentioned in conversation are soft targets, not hard deadlines — "let's do this Tuesday" just means a time horizon. Only flag something for the calendar when the user indicates a genuine external deadline that cannot slip (e.g. "the application closes March 15"). When you do flag one, remind the user to put it on their calendar since this task system is not a calendar.
 
-### Goals
-The user can update their priorities by explicitly asking, e.g. "update my weekly goals to: finish hiring round, finalize lease." Only update goals when the user explicitly asks — don't infer goal changes from casual conversation.
-
 ## Task Operations
 
-After your conversational response, if any tasks need to be created, updated, completed, or deleted, output a JSON block wrapped in delimiters like this:
+After your conversational response, if any tasks or outcomes need to be created, updated, or deleted, output a JSON block wrapped in delimiters like this:
 
 <<<TASK_OPS>>>
 [
-  {"op": "add", "title": "Task title", "description": "Optional detail", "tags": ["tag1"], "time_horizon": "today"},
+  {"op": "add", "title": "Task title", "description": "Optional detail", "tags": ["tag1"], "time_horizon": "today", "outcome_id": 3},
   {"op": "update", "id": 1, "title": "New title", "time_horizon": "thursday"},
   {"op": "complete", "id": 2},
   {"op": "delete", "id": 3},
-  {"op": "set_goals", "level": "weekly", "content": "Finish hiring round, finalize lease"}
+  {"op": "create_outcome", "title": "All five roles filled", "definition_of_done": "Offers accepted for all five positions"},
+  {"op": "update_outcome", "id": 1, "definition_of_done": "Updated definition"},
+  {"op": "close_outcome", "id": 1},
+  {"op": "delete_outcome", "id": 1},
+  {"op": "link_task", "task_id": 42, "outcome_id": 3},
+  {"op": "unlink_task", "task_id": 42}
 ]
 <<<END_TASK_OPS>>>
 
-Rules for operations:
-- "add": requires "title". Optional: "description", "tags" (array), "time_horizon" (${validHorizons}). Use ONLY for genuinely new tasks — never for tasks that were referenced in the message.
-- "update": requires "id" (use the ID from the referenced task). Include only the fields to change.
+Task operation rules:
+- "add": requires "title". Optional: "description", "tags" (array), "time_horizon" (${validHorizons}), "outcome_id". Use ONLY for genuinely new tasks — never for tasks that were referenced in the message.
+- "update": requires "id". Include only the fields to change.
 - "complete": requires "id". Marks a task as done.
 - "delete": requires "id". Permanently removes a task.
-- "set_goals": requires "level" (right_now|weekly|quarterly) and "content" (string).
+
+Outcome operation rules:
+- "create_outcome": requires "title". Optional: "definition_of_done", "description". Color is assigned automatically.
+- "update_outcome": requires "id". Optional: "title", "definition_of_done", "description".
+- "close_outcome": requires "id". Marks the outcome as done.
+- "delete_outcome": requires "id". Permanently removes the outcome and unlinks its tasks.
+- "link_task": requires "task_id" and "outcome_id". Links a task to an outcome.
+- "unlink_task": requires "task_id". Removes a task from its outcome.
 
 If referenced tasks are attached, use their IDs for operations. Do not create new tasks for things that match referenced tasks.
+If referenced outcomes are attached, use their IDs for outcome operations. Only make changes when the user confirms.
 
 Only include the TASK_OPS block if you need to make changes. If the user is just chatting, respond without it.
 Valid time_horizon values: ${validHorizons}.
@@ -131,6 +143,25 @@ function formatReferencedTasks(tasks: Task[]): string {
     return `Task #${t.id}: "${t.title}" (${meta.join(", ")})`;
   });
   return `[Referenced Tasks]\n${lines.join("\n")}\n[End Referenced Tasks]`;
+}
+
+function formatReferencedOutcomes(outcomes: OutcomeWithTasks[]): string {
+  const lines: string[] = ["[Referenced Outcomes]"];
+  for (const o of outcomes) {
+    lines.push(`Outcome #${o.id}: "${o.title}"`);
+    if (o.definition_of_done) lines.push(`  Definition of done: ${o.definition_of_done}`);
+    if (o.description) lines.push(`  Description: ${o.description}`);
+    if (o.tasks.length > 0) {
+      lines.push(`  Active tasks:`);
+      for (const t of o.tasks) {
+        const meta: string[] = [`time_horizon: ${t.time_horizon}`, `status: ${t.status}`];
+        if (t.tags.length > 0) meta.push(`tags: [${t.tags.join(", ")}]`);
+        lines.push(`    Task #${t.id}: "${t.title}" (${meta.join(", ")})`);
+      }
+    }
+  }
+  lines.push("[End Referenced Outcomes]");
+  return lines.join("\n");
 }
 
 const TASK_OPS_REGEX = /<<<TASK_OPS>>>\s*([\s\S]*?)\s*<<<END_TASK_OPS>>>/;
@@ -164,19 +195,20 @@ export async function callClaude(
   message: string,
   history: ChatMessage[],
   referencedTasks: Task[],
-  goals: Goals,
+  referencedOutcomes: OutcomeWithTasks[],
   userContext: string
 ): Promise<{ reply: string; operations: TaskOperation[] }> {
-  const systemPrompt = buildSystemPrompt(goals, userContext);
+  const systemPrompt = buildSystemPrompt(userContext);
 
   // Cap history at last 20 messages
   const recentHistory = history.slice(-20);
 
-  // Prepend referenced task context if any
-  const content =
-    referencedTasks.length > 0
-      ? `${formatReferencedTasks(referencedTasks)}\n\n${message}`
-      : message;
+  // Build enriched message with referenced context
+  const parts: string[] = [];
+  if (referencedTasks.length > 0) parts.push(formatReferencedTasks(referencedTasks));
+  if (referencedOutcomes.length > 0) parts.push(formatReferencedOutcomes(referencedOutcomes));
+  parts.push(message);
+  const content = parts.join("\n\n");
 
   const messages = [
     ...recentHistory.map((msg) => ({
