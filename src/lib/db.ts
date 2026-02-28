@@ -127,6 +127,20 @@ export async function setGoal(level: string, content: string): Promise<void> {
   await sql`UPDATE goals SET content = ${content} WHERE level = ${level}`;
 }
 
+export async function getConfig(key: string): Promise<string> {
+  const sql = getDb();
+  const rows = await sql`SELECT value FROM config WHERE key = ${key}`;
+  return rows.length > 0 ? (rows[0].value as string) : "";
+}
+
+export async function setConfig(key: string, value: string): Promise<void> {
+  const sql = getDb();
+  await sql`
+    INSERT INTO config (key, value) VALUES (${key}, ${value})
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+  `;
+}
+
 export async function applyOperations(ops: TaskOperation[], source?: string): Promise<void> {
   for (const op of ops) {
     switch (op.op) {

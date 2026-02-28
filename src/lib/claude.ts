@@ -22,7 +22,7 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export function buildSystemPrompt(goals: Goals): string {
+export function buildSystemPrompt(goals: Goals, userContext: string): string {
   const now = new Date();
 
   // Named days: the 5 days after tomorrow (offsets 2–6 from today)
@@ -49,9 +49,13 @@ export function buildSystemPrompt(goals: Goals): string {
     timeZoneName: "short",
   }).format(now);
 
+  const contextSection = userContext.trim()
+    ? `\n\n## Context\n\n${userContext.trim()}`
+    : "";
+
   return `You are a task management assistant. You help the user capture, organize, and track their tasks through natural conversation.
 
-Today is: ${dateTime}.
+Today is: ${dateTime}.${contextSection}
 
 ## Current Priorities
 
@@ -160,9 +164,10 @@ export async function callClaude(
   message: string,
   history: ChatMessage[],
   referencedTasks: Task[],
-  goals: Goals
+  goals: Goals,
+  userContext: string
 ): Promise<{ reply: string; operations: TaskOperation[] }> {
-  const systemPrompt = buildSystemPrompt(goals);
+  const systemPrompt = buildSystemPrompt(goals, userContext);
 
   // Cap history at last 20 messages
   const recentHistory = history.slice(-20);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAllTasks, applyOperations, getGoals } from "@/lib/db";
+import { getAllTasks, applyOperations, getGoals, getConfig } from "@/lib/db";
 import { callClaude } from "@/lib/claude";
 import type { ChatRequest, ChatResponse } from "@/lib/types";
 
@@ -14,15 +14,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Get goals (no task list — tasks are only sent when explicitly referenced)
-    const goals = await getGoals();
+    // 1. Get goals and user context
+    const [goals, userContext] = await Promise.all([
+      getGoals(),
+      getConfig("user_context"),
+    ]);
 
-    // 2. Call Claude with message, history, referenced tasks, and goals
+    // 2. Call Claude with message, history, referenced tasks, goals, and context
     const { reply, operations } = await callClaude(
       body.message,
       body.history ?? [],
       body.referencedTasks ?? [],
-      goals
+      goals,
+      userContext
     );
 
     // 3. Apply any task operations

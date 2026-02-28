@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import type { ChatMessage, Task, ChatResponse, TasksResponse, MaintenanceResult } from "@/lib/types";
 import ChatPanel from "@/components/ChatPanel";
 import TaskList from "@/components/TaskList";
@@ -124,13 +125,22 @@ export default function Home() {
       <div className="w-[35%] overflow-y-auto border-l border-gray-800">
         <div className="border-b border-gray-800 px-4 py-3 flex items-center justify-between">
           <h1 className="text-sm font-semibold text-gray-300">Tasks</h1>
-          <button
-            onClick={handleMaintenance}
-            disabled={maintenanceRunning}
-            className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-40 transition-colors"
-          >
-            {maintenanceRunning ? "Running…" : "Daily shift"}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleMaintenance}
+              disabled={maintenanceRunning}
+              className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-40 transition-colors"
+            >
+              {maintenanceRunning ? "Running…" : "Daily shift"}
+            </button>
+            <Link
+              href="/settings"
+              className="text-gray-600 hover:text-gray-300 transition-colors"
+              title="Settings"
+            >
+              ⚙
+            </Link>
+          </div>
         </div>
         {maintenanceStatus && (
           <div className="border-b border-gray-800 px-4 py-2 text-xs text-gray-400">
