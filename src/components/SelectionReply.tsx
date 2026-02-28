@@ -22,7 +22,6 @@ export default function SelectionReply({ onReply }: SelectionReplyProps) {
     const text = selection.toString().trim();
     if (!text) return;
 
-    // Skip selections inside textarea/input
     let node: Node | null = selection.anchorNode;
     while (node) {
       if (
@@ -67,7 +66,7 @@ export default function SelectionReply({ onReply }: SelectionReplyProps) {
       style={{ left: tooltip.x, top: tooltip.y - 6 }}
     >
       <button
-        className="pointer-events-auto rounded bg-gray-700 px-2 py-1 text-xs text-gray-100 hover:bg-gray-600 shadow-lg border border-gray-600"
+        className="pointer-events-auto rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 shadow-sm"
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => {
           onReply(tooltip.text);

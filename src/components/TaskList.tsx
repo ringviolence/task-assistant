@@ -31,7 +31,6 @@ function buildHorizonConfig() {
     someday: "Someday",
   };
 
-  // Named days: offsets 2–6 from today
   for (let i = 2; i <= 6; i++) {
     const d = new Date(now);
     d.setDate(now.getDate() + i);
@@ -68,7 +67,7 @@ export default function TaskList({
 
   if (tasks.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center text-gray-500">
+      <div className="flex h-full flex-col items-center justify-center text-gray-400">
         <p className="text-sm">No tasks yet</p>
         <p className="mt-1 text-xs">Chat with the assistant to add tasks</p>
       </div>
@@ -79,10 +78,10 @@ export default function TaskList({
     <div className="flex flex-col gap-6 overflow-y-auto p-4">
       {grouped.map(({ horizon, label, tasks: groupTasks }) => (
         <div key={horizon}>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
             {label}
           </h2>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             {groupTasks.map((task) => (
               <TaskCard
                 key={task.id}
@@ -96,10 +95,10 @@ export default function TaskList({
       ))}
       {doneTasks.length > 0 && (
         <div>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
             Completed
           </h2>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             {doneTasks.map((task) => (
               <TaskCard
                 key={task.id}

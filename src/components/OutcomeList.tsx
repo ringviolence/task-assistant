@@ -13,7 +13,7 @@ export default function OutcomeList({
 
   if (outcomes.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center text-gray-500">
+      <div className="flex h-full flex-col items-center justify-center text-gray-400">
         <p className="text-sm">No outcomes yet</p>
         <p className="mt-1 text-xs">Ask the assistant to create an outcome</p>
       </div>
@@ -21,13 +21,13 @@ export default function OutcomeList({
   }
 
   return (
-    <div className="flex flex-col gap-3 p-4">
+    <div className="flex flex-col gap-2 p-4">
       {active.map((o) => (
         <OutcomeCard key={o.id} outcome={o} onReference={onReference} />
       ))}
       {done.length > 0 && (
         <>
-          <h2 className="mt-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+          <h2 className="mt-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
             Completed
           </h2>
           {done.map((o) => (

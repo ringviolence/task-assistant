@@ -32,7 +32,6 @@ export default function Home() {
   const [referencedOutcomes, setReferencedOutcomes] = useState<OutcomeWithTasks[]>([]);
   const [activeTab, setActiveTab] = useState<"tasks" | "outcomes">("tasks");
 
-  // Load tasks and outcomes on mount
   useEffect(() => {
     fetch("/api/tasks")
       .then((r) => r.json())
@@ -44,7 +43,6 @@ export default function Home() {
       .catch(console.error);
   }, []);
 
-  // Map of outcomeId -> color for task row tinting
   const outcomeColors = useMemo(
     () => Object.fromEntries(outcomes.map((o) => [o.id, o.color])),
     [outcomes]
@@ -144,9 +142,11 @@ export default function Home() {
   const handleQuoteConsumed = useCallback(() => setQuotedText(null), []);
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-white">
       <SelectionReply onReply={setQuotedText} />
-      <div className="flex-1 border-r border-gray-800">
+
+      {/* Left: chat panel */}
+      <div className="flex-1 border-r border-gray-200">
         <ChatPanel
           messages={messages}
           onSend={handleSend}
@@ -159,16 +159,18 @@ export default function Home() {
           onRemoveOutcomeReference={handleRemoveOutcomeReference}
         />
       </div>
-      <div className="w-[35%] flex flex-col border-l border-gray-800">
-        {/* Header with tabs and actions */}
-        <div className="border-b border-gray-800 px-4 flex items-center justify-between shrink-0">
+
+      {/* Right: tasks / outcomes panel */}
+      <div className="w-[35%] flex flex-col border-l border-gray-200 bg-white">
+        {/* Tab bar */}
+        <div className="border-b border-gray-200 px-4 flex items-center justify-between shrink-0">
           <div className="flex">
             <button
               onClick={() => setActiveTab("tasks")}
               className={`py-3 pr-4 text-xs font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === "tasks"
-                  ? "border-gray-300 text-gray-200"
-                  : "border-transparent text-gray-500 hover:text-gray-300"
+                  ? "border-gray-900 text-gray-900"
+                  : "border-transparent text-gray-400 hover:text-gray-700"
               }`}
             >
               Tasks
@@ -177,8 +179,8 @@ export default function Home() {
               onClick={() => setActiveTab("outcomes")}
               className={`py-3 pr-4 text-xs font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === "outcomes"
-                  ? "border-gray-300 text-gray-200"
-                  : "border-transparent text-gray-500 hover:text-gray-300"
+                  ? "border-gray-900 text-gray-900"
+                  : "border-transparent text-gray-400 hover:text-gray-700"
               }`}
             >
               Outcomes
@@ -188,22 +190,23 @@ export default function Home() {
             <button
               onClick={handleMaintenance}
               disabled={maintenanceRunning}
-              className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-40 transition-colors"
+              className="text-xs text-gray-400 hover:text-gray-700 disabled:opacity-40 transition-colors"
             >
               {maintenanceRunning ? "Running…" : "Daily shift"}
             </button>
             <Link
               href="/settings"
-              className="text-gray-600 hover:text-gray-300 transition-colors"
+              className="text-gray-400 hover:text-gray-700 transition-colors text-sm"
               title="Settings"
             >
               ⚙
             </Link>
           </div>
         </div>
-        {/* Maintenance status banner */}
+
+        {/* Maintenance status */}
         {maintenanceStatus && (
-          <div className="border-b border-gray-800 px-4 py-2 text-xs text-gray-400 shrink-0">
+          <div className="border-b border-gray-200 px-4 py-2 text-xs text-gray-500 shrink-0">
             {maintenanceStatus.shifted > 0 || maintenanceStatus.overdue > 0 ? (
               <>
                 Shifted {maintenanceStatus.shifted} task{maintenanceStatus.shifted !== 1 ? "s" : ""} to today
@@ -215,12 +218,13 @@ export default function Home() {
               "Nothing to shift"
             )}
             {maintenanceStatus.duplicates.length > 0 && (
-              <span className="ml-2 text-yellow-600">
+              <span className="ml-2 text-amber-600">
                 · {maintenanceStatus.duplicates.length} possible duplicate{maintenanceStatus.duplicates.length !== 1 ? "s" : ""}
               </span>
             )}
           </div>
         )}
+
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto">
           {activeTab === "tasks" ? (

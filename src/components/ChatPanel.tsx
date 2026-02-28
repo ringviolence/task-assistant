@@ -34,19 +34,16 @@ export default function ChatPanel({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Focus input on mount and whenever loading finishes
   useEffect(() => {
     if (!loading) {
       inputRef.current?.focus();
     }
   }, [loading]);
 
-  // Insert quoted text when a reply is triggered
   useEffect(() => {
     if (!quotedText) return;
     const ta = inputRef.current;
     if (!ta) return;
-
     const lines = quotedText.split("\n");
     const quote = lines.map((line) => `> ${line}`).join("\n") + "\n\n";
     const existing = ta.value;
@@ -83,10 +80,10 @@ export default function ChatPanel({
   const hasChips = referencedTasks.length > 0 || referencedOutcomes.length > 0;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-white">
       <div className="flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-gray-500">
+          <div className="flex h-full items-center justify-center text-gray-400">
             <p className="text-sm">What are you working on?</p>
           </div>
         ) : (
@@ -96,7 +93,7 @@ export default function ChatPanel({
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-400">
+                <div className="rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-500">
                   Thinking...
                 </div>
               </div>
@@ -105,19 +102,19 @@ export default function ChatPanel({
           </div>
         )}
       </div>
-      <form onSubmit={handleSubmit} className="border-t border-gray-800 p-4">
+      <form onSubmit={handleSubmit} className="border-t border-gray-200 p-4">
         {hasChips && (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {referencedTasks.map((task) => (
               <span
                 key={`task-${task.id}`}
-                className="flex items-center gap-1 rounded-full border bg-blue-900/40 border-blue-700/50 px-2.5 py-1 text-xs text-blue-300"
+                className="flex items-center gap-1 rounded-full border border-gray-300 bg-gray-100 px-2.5 py-1 text-xs text-gray-700"
               >
                 <span className="max-w-[180px] truncate">{task.title}</span>
                 <button
                   type="button"
                   onClick={() => onRemoveReference(task.id)}
-                  className="text-blue-400 hover:text-blue-200 leading-none ml-0.5"
+                  className="ml-0.5 leading-none text-gray-400 hover:text-gray-700"
                   aria-label="Remove reference"
                 >
                   ×
@@ -129,8 +126,8 @@ export default function ChatPanel({
                 key={`outcome-${outcome.id}`}
                 className="flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs"
                 style={{
-                  backgroundColor: `${outcome.color}22`,
-                  borderColor: `${outcome.color}55`,
+                  backgroundColor: `${outcome.color}33`,
+                  borderColor: `${outcome.color}77`,
                   color: outcome.color,
                 }}
               >
@@ -138,7 +135,7 @@ export default function ChatPanel({
                 <button
                   type="button"
                   onClick={() => onRemoveOutcomeReference(outcome.id)}
-                  className="leading-none ml-0.5 opacity-70 hover:opacity-100"
+                  className="ml-0.5 leading-none opacity-60 hover:opacity-100"
                   aria-label="Remove outcome reference"
                 >
                   ×
@@ -156,13 +153,13 @@ export default function ChatPanel({
             disabled={loading}
             onInput={autoResize}
             onKeyDown={handleKeyDown}
-            className="flex-1 resize-none rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-sm text-gray-100 placeholder-gray-500 outline-none focus:border-blue-500 disabled:opacity-50"
+            className="flex-1 resize-none rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-500 disabled:opacity-50"
             style={{ maxHeight: "50vh" }}
           />
           <button
             type="submit"
             disabled={loading}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
           >
             Send
           </button>
