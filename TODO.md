@@ -1,20 +1,26 @@
-# Improvements
+# Task Assistant — Status
 
-- [x] **Next.js dev indicator overlaps chat input** — Disabled via `devIndicators: false` in `next.config.ts`.
-- [x] **500 error on first chat message** — Root cause was insufficient API credits. Improved error handling in `route.ts` to surface actual Anthropic API errors instead of a generic 500.
+## Done
 
-# Roadmap
+- **Core app** — Split-screen chat + task list, Claude via Anthropic SDK, non-streaming
+- **Neon Postgres** — Tasks, outcomes, config tables; session auth (HMAC cookie)
+- **Vercel deploy** — Cron job for daily shift at 9am UTC, environment variables set
+- **Reference-based architecture** — Tasks/outcomes not injected into system prompt; user attaches them explicitly via @ button; chips shown at input
+- **Outcomes** — Milestones with definition of done; pastel color system; Tasks/Outcomes tabs; linked task rows get a color tint; outcome chips in chat
+- **User context** — Static background about the user injected into every system prompt; editable at `/settings`
+- **Daily shift idempotency** — Runs once per calendar day via `last_shift_date` in config
+- **Ingest endpoint** — `POST /api/ingest` accepts tasks from external sources (Slack via Zapier, Google Tasks, etc.) with source-specific prompting
+- **Maintenance endpoint** — `POST /api/maintenance` for duplicate detection and horizon shifting; also called by Vercel Cron
 
-## Deploy to production
-- [ ] **Swap database from sql.js to hosted DB** — sql.js is in-memory with file persistence, which won't work on stateless platforms like Vercel. Options: Vercel Postgres, Neon, or Turso (hosted SQLite). The `db.ts` layer is already isolated so the swap is contained.
-- [ ] **Deploy to Vercel** — Set `ANTHROPIC_API_KEY` as an environment variable in project settings. No code changes needed for the API key; the SDK reads it from `process.env` automatically.
+## Possible next work
 
-## Slack integration (via Zapier)
-- [ ] **Smart ingest API route** — New endpoint (e.g. `/api/ingest`) that receives a Slack message or thread from Zapier, passes it through Claude with a Slack-specific system prompt to extract a clean task, and writes it to the database. Avoids storing raw messy Slack content that requires manual cleanup.
-- [ ] **Slack-specific system prompt** — One-shot extraction prompt: given a Slack message/thread the user bookmarked, infer the task title, description, urgency, and tags. Simpler than the chat prompt since there's no conversation — just input → structured task.
-- [ ] **Zapier workflow** — Slack trigger (e.g. saved message, reaction, or slash command) → HTTP POST to the ingest endpoint. Zapier handles all Slack auth and event listening.
-- [ ] **Auth on ingest endpoint** — Shared secret or bearer token to prevent unauthorized POST requests. Store the token in Vercel env vars and validate it in the route.
-- [ ] **Thread support** — When available, send the full Slack thread (not just a single message) to give Claude enough context to extract a meaningful task.
+### Outcomes follow-on
+- [ ] **Outcome progress indicator** — Show how many tasks are done vs. total within an outcome (e.g. "3 of 7 tasks done")
+- [ ] **Assign tasks to outcomes from task tab** — Currently done through chat; could add a quick-assign UI directly on the task card
 
-## Future input sources
-- [ ] The smart ingest pattern generalizes beyond Slack — email forwards, voice memo transcriptions, screenshots, etc. could all go through the same route with source-specific prompt framing.
+### Input sources
+- [ ] **Google Tasks sync** — Pull tasks from Google Tasks via the ingest endpoint; source field already supported
+- [ ] **Zapier thread support** — Send full Slack thread context (not just the triggering message) for better task extraction
+
+### Context
+- [ ] **Context auto-update** — Background job that synthesizes recent conversation history to keep the user context block fresh; currently manually maintained
