@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import type { ChatMessage as ChatMessageType } from "@/lib/types";
+import type { ChatMessage as ChatMessageType, Task } from "@/lib/types";
 import ChatMessage from "./ChatMessage";
 
 interface ChatPanelProps {
@@ -10,6 +10,8 @@ interface ChatPanelProps {
   loading: boolean;
   quotedText: string | null;
   onQuoteConsumed: () => void;
+  referencedTasks: Task[];
+  onRemoveReference: (id: number) => void;
 }
 
 export default function ChatPanel({
@@ -18,6 +20,8 @@ export default function ChatPanel({
   loading,
   quotedText,
   onQuoteConsumed,
+  referencedTasks,
+  onRemoveReference,
 }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -96,6 +100,26 @@ export default function ChatPanel({
         )}
       </div>
       <form onSubmit={handleSubmit} className="border-t border-gray-800 p-4">
+        {referencedTasks.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {referencedTasks.map((task) => (
+              <span
+                key={task.id}
+                className="flex items-center gap-1 rounded-full bg-blue-900/50 border border-blue-700/50 px-2.5 py-1 text-xs text-blue-300"
+              >
+                <span className="max-w-[180px] truncate">{task.title}</span>
+                <button
+                  type="button"
+                  onClick={() => onRemoveReference(task.id)}
+                  className="text-blue-400 hover:text-blue-200 leading-none ml-0.5"
+                  aria-label="Remove reference"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
         <div className="flex gap-2">
           <textarea
             ref={inputRef}

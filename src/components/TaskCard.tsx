@@ -9,7 +9,13 @@ const statusStyles: Record<Task["status"], string> = {
   waiting: "border-yellow-900 bg-gray-900",
 };
 
-export default function TaskCard({ task }: { task: Task }) {
+export default function TaskCard({
+  task,
+  onReference,
+}: {
+  task: Task;
+  onReference?: (task: Task) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const hasDetails = task.description || task.tags.length > 0;
 
@@ -27,6 +33,15 @@ export default function TaskCard({ task }: { task: Task }) {
           )}
           {task.status === "done" && (
             <span className="text-xs text-green-600">done</span>
+          )}
+          {onReference && (
+            <button
+              onClick={() => onReference(task)}
+              className="text-gray-600 hover:text-gray-300 text-xs leading-none"
+              title="Reference in chat"
+            >
+              @
+            </button>
           )}
           {hasDetails && (
             <button

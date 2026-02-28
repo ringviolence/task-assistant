@@ -44,7 +44,13 @@ function buildHorizonConfig() {
   return { order, labels };
 }
 
-export default function TaskList({ tasks }: { tasks: Task[] }) {
+export default function TaskList({
+  tasks,
+  onReference,
+}: {
+  tasks: Task[];
+  onReference?: (task: Task) => void;
+}) {
   const { order, labels } = buildHorizonConfig();
 
   const activeTasks = tasks.filter((t) => t.status !== "done");
@@ -76,7 +82,7 @@ export default function TaskList({ tasks }: { tasks: Task[] }) {
           </h2>
           <div className="flex flex-col gap-2">
             {groupTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard key={task.id} task={task} onReference={onReference} />
             ))}
           </div>
         </div>
@@ -88,7 +94,7 @@ export default function TaskList({ tasks }: { tasks: Task[] }) {
           </h2>
           <div className="flex flex-col gap-2">
             {doneTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard key={task.id} task={task} onReference={onReference} />
             ))}
           </div>
         </div>

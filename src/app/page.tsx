@@ -17,6 +17,7 @@ export default function Home() {
   const [maintenanceRunning, setMaintenanceRunning] = useState(false);
   const [maintenanceStatus, setMaintenanceStatus] = useState<MaintenanceStatus>(null);
   const [quotedText, setQuotedText] = useState<string | null>(null);
+  const [referencedTasks, setReferencedTasks] = useState<Task[]>([]);
 
   // Load tasks on mount
   useEffect(() => {
@@ -26,11 +27,23 @@ export default function Home() {
       .catch(console.error);
   }, []);
 
+  const handleAddReference = useCallback((task: Task) => {
+    setReferencedTasks((prev) =>
+      prev.some((t) => t.id === task.id) ? prev : [...prev, task]
+    );
+  }, []);
+
+  const handleRemoveReference = useCallback((id: number) => {
+    setReferencedTasks((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   const handleSend = useCallback(
     async (message: string) => {
       const userMessage: ChatMessage = { role: "user", content: message };
       setMessages((prev) => [...prev, userMessage]);
       setLoading(true);
+      const refs = referencedTasks;
+      setReferencedTasks([]);
 
       try {
         const res = await fetch("/api/chat", {
@@ -39,6 +52,7 @@ export default function Home() {
           body: JSON.stringify({
             message,
             history: messages,
+            referencedTasks: refs,
           }),
         });
 
@@ -66,7 +80,7 @@ export default function Home() {
         setLoading(false);
       }
     },
-    [messages]
+    [messages, referencedTasks]
   );
 
   const handleMaintenance = useCallback(async () => {
@@ -103,6 +117,8 @@ export default function Home() {
           loading={loading}
           quotedText={quotedText}
           onQuoteConsumed={handleQuoteConsumed}
+          referencedTasks={referencedTasks}
+          onRemoveReference={handleRemoveReference}
         />
       </div>
       <div className="w-[35%] overflow-y-auto border-l border-gray-800">
@@ -135,7 +151,7 @@ export default function Home() {
             )}
           </div>
         )}
-        <TaskList tasks={tasks} />
+        <TaskList tasks={tasks} onReference={handleAddReference} />
       </div>
     </div>
   );

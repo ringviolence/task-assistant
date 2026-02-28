@@ -14,15 +14,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Get current tasks and goals
-    const currentTasks = await getAllTasks();
+    // 1. Get goals (no task list — tasks are only sent when explicitly referenced)
     const goals = await getGoals();
 
-    // 2. Call Claude with message, history, current tasks, and goals
+    // 2. Call Claude with message, history, referenced tasks, and goals
     const { reply, operations } = await callClaude(
       body.message,
       body.history ?? [],
-      currentTasks,
+      body.referencedTasks ?? [],
       goals
     );
 

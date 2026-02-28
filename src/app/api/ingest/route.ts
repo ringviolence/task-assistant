@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { getAllTasks, getGoals, applyOperations } from "@/lib/db";
+import { getGoals, applyOperations } from "@/lib/db";
 import { buildSystemPrompt, parseTaskOperations } from "@/lib/claude";
 
 const anthropic = new Anthropic();
@@ -53,15 +53,14 @@ export async function POST(request: Request) {
     }
     userMessage += " Process this as a new task.";
 
-    // Get current tasks and goals for context
-    const tasks = await getAllTasks();
+    // Get goals for context
     const goals = await getGoals();
 
     // Build system prompt with source-specific addition
     const sourceInstruction =
       SOURCE_INSTRUCTIONS[body.source] ?? DEFAULT_SOURCE_INSTRUCTION;
     const systemPrompt =
-      buildSystemPrompt(tasks, goals) + "\n\n## Ingest Context\n" + sourceInstruction;
+      buildSystemPrompt(goals) + "\n\n## Ingest Context\n" + sourceInstruction;
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5-20250929",
