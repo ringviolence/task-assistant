@@ -14,6 +14,7 @@ interface ChatPanelProps {
   onRemoveReference: (id: number) => void;
   referencedOutcomes: OutcomeWithTasks[];
   onRemoveOutcomeReference: (id: number) => void;
+  onEndDiscussion: () => void;
 }
 
 export default function ChatPanel({
@@ -26,6 +27,7 @@ export default function ChatPanel({
   onRemoveReference,
   referencedOutcomes,
   onRemoveOutcomeReference,
+  onEndDiscussion,
 }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -78,6 +80,7 @@ export default function ChatPanel({
   }
 
   const hasChips = referencedTasks.length > 0 || referencedOutcomes.length > 0;
+  const isDiscussionMode = referencedOutcomes.length > 0;
 
   return (
     <div className="flex h-full flex-col bg-white">
@@ -104,21 +107,23 @@ export default function ChatPanel({
       </div>
       <form onSubmit={handleSubmit} className="border-t border-gray-200 p-4">
         {hasChips && (
-          <div className="mb-2 flex flex-wrap gap-1.5">
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
             {referencedTasks.map((task) => (
               <span
                 key={`task-${task.id}`}
                 className="flex items-center gap-1 rounded-full border border-gray-300 bg-gray-100 px-2.5 py-1 text-xs text-gray-700"
               >
                 <span className="max-w-[180px] truncate">{task.title}</span>
-                <button
-                  type="button"
-                  onClick={() => onRemoveReference(task.id)}
-                  className="ml-0.5 leading-none text-gray-400 hover:text-gray-700"
-                  aria-label="Remove reference"
-                >
-                  ×
-                </button>
+                {!isDiscussionMode && (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveReference(task.id)}
+                    className="ml-0.5 leading-none text-gray-400 hover:text-gray-700"
+                    aria-label="Remove reference"
+                  >
+                    ×
+                  </button>
+                )}
               </span>
             ))}
             {referencedOutcomes.map((outcome) => (
@@ -132,16 +137,17 @@ export default function ChatPanel({
                 }}
               >
                 <span className="max-w-[180px] truncate">{outcome.title}</span>
-                <button
-                  type="button"
-                  onClick={() => onRemoveOutcomeReference(outcome.id)}
-                  className="ml-0.5 leading-none opacity-60 hover:opacity-100"
-                  aria-label="Remove outcome reference"
-                >
-                  ×
-                </button>
               </span>
             ))}
+            {isDiscussionMode && (
+              <button
+                type="button"
+                onClick={onEndDiscussion}
+                className="ml-auto shrink-0 text-xs text-gray-400 hover:text-gray-700"
+              >
+                ✕ End discussion
+              </button>
+            )}
           </div>
         )}
         <div className="flex gap-2">

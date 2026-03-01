@@ -68,15 +68,30 @@ export default function Home() {
     setReferencedOutcomes((prev) => prev.filter((o) => o.id !== id));
   }, []);
 
+  const handleEndDiscussion = useCallback(() => {
+    setReferencedTasks([]);
+    setReferencedOutcomes([]);
+  }, []);
+
   const handleSend = useCallback(
     async (message: string) => {
-      const userMessage: ChatMessage = { role: "user", content: message };
-      setMessages((prev) => [...prev, userMessage]);
-      setLoading(true);
       const refs = referencedTasks;
       const outcomeRefs = referencedOutcomes;
-      setReferencedTasks([]);
-      setReferencedOutcomes([]);
+      const isDiscussion = outcomeRefs.length > 0;
+
+      const userMessage: ChatMessage = {
+        role: "user",
+        content: message,
+        referencedTasks: refs.length > 0 ? refs : undefined,
+        referencedOutcomes: outcomeRefs.length > 0 ? outcomeRefs : undefined,
+      };
+      setMessages((prev) => [...prev, userMessage]);
+      setLoading(true);
+
+      if (!isDiscussion) {
+        setReferencedTasks([]);
+        setReferencedOutcomes([]);
+      }
 
       try {
         const res = await fetch("/api/chat", {
@@ -157,6 +172,7 @@ export default function Home() {
           onRemoveReference={handleRemoveReference}
           referencedOutcomes={referencedOutcomes}
           onRemoveOutcomeReference={handleRemoveOutcomeReference}
+          onEndDiscussion={handleEndDiscussion}
         />
       </div>
 

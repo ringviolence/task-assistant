@@ -85,6 +85,8 @@ export interface TaskOperation {
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  referencedTasks?: Task[];
+  referencedOutcomes?: OutcomeWithTasks[];
 }
 
 export interface ChatRequest {
