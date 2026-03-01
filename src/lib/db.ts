@@ -307,12 +307,16 @@ export async function applyOperations(ops: TaskOperation[], source?: string): Pr
       case "delete_outcome":
         if (op.id) await deleteOutcome(op.id);
         break;
-      case "link_task":
-        if (op.task_id && op.outcome_id) await linkTask(op.task_id, op.outcome_id);
+      case "link_task": {
+        const taskId = op.task_id ?? op.id;
+        if (taskId && op.outcome_id) await linkTask(taskId, op.outcome_id);
         break;
-      case "unlink_task":
-        if (op.task_id) await unlinkTask(op.task_id);
+      }
+      case "unlink_task": {
+        const taskId = op.task_id ?? op.id;
+        if (taskId) await unlinkTask(taskId);
         break;
+      }
     }
   }
 }
