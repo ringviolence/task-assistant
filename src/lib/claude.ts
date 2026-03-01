@@ -184,6 +184,79 @@ function formatReferencedOutcomes(outcomes: OutcomeWithTasks[]): string {
   return lines.join("\n");
 }
 
+// ── Search ─────────────────────────────────────────────────────────────────
+
+const SEARCH_SYSTEM_PROMPT = `You are a task search assistant. The user is looking for specific tasks from their task list. Your job is to figure out which tasks they're thinking of based on their search query, and return them ranked by relevance.
+
+## How to interpret search queries
+
+Users search in messy, human ways. They won't type exact task titles. They might search by:
+- **Approximate title:** "hockey tickets" should match "Pay Sarah $44.20 for hockey tickets"
+- **Person's name:** "Sarah" should match any task mentioning Sarah
+- **Category or topic:** "money" or "finances" should match tasks about paying bills, rent, insurance, etc.
+- **Action type:** "pay" or "buy" should match payment/purchase-related tasks
+- **Context or association:** "that thing for the apartment" should match tasks about rent, fire alarms, bed lights, etc.
+- **Time references:** "stuff for Monday" should match tasks with time_horizon monday
+- **Tags:** "personal" should match tasks tagged personal
+- **Partial words or typos:** "hocky" should still match hockey, "electr" should match electricity
+- **Outcome references:** if a task belongs to an outcome, searching the outcome name should surface those tasks
+- **Emotional/vague descriptions:** "that annoying admin thing" could match bureaucratic tasks like insurance, mail filing, etc.
+
+Be generous with matching. It's better to return a few extra results than to miss the task the user is looking for. But rank by relevance — the most likely match should be first.
+
+## Your response format
+
+Respond with ONLY a JSON array of task IDs in order of relevance, most relevant first. Return at most 10 results. If nothing matches at all, return an empty array.
+
+Example:
+[47, 12, 8, 23]
+
+Do not include any other text, explanation, or formatting. Just the JSON array.`;
+
+export async function searchTasks(
+  query: string,
+  tasks: Task[],
+  outcomes: OutcomeWithTasks[]
+): Promise<number[]> {
+  const outcomeMap = new Map(outcomes.map((o) => [o.id, o.title]));
+
+  const taskLines = tasks.map((t) => {
+    const meta: string[] = [t.time_horizon];
+    if (t.tags.length > 0) meta.push(`tags: ${t.tags.join("/")}`);
+    meta.push(`status: ${t.status}`);
+    if (t.outcome_id) {
+      const outcomeTitle = outcomeMap.get(t.outcome_id);
+      if (outcomeTitle) meta.push(`outcome: ${outcomeTitle}`);
+    }
+    let line = `[${t.id}] ${t.title} (${meta.join(", ")})`;
+    if (t.description) line += `\n  ${t.description}`;
+    return line;
+  });
+
+  const content = `## Tasks to search\n\n${taskLines.join("\n")}\n\n## User's search query\n\n${query}`;
+
+  // Use claude-haiku-4-5-20251001 — lighter/cheaper model; search is simpler than the main chat task
+  const response = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 256,
+    system: SEARCH_SYSTEM_PROMPT,
+    messages: [{ role: "user", content }],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "[]";
+
+  try {
+    const ids = JSON.parse(text.trim());
+    if (Array.isArray(ids)) {
+      return ids.filter((id): id is number => typeof id === "number");
+    }
+  } catch {
+    console.error("Failed to parse search response:", text);
+  }
+
+  return [];
+}
+
 const TASK_OPS_REGEX = /<<<TASK_OPS>>>\s*([\s\S]*?)\s*<<<END_TASK_OPS>>>/;
 
 export function parseTaskOperations(text: string): {

@@ -15,6 +15,7 @@ import ChatPanel from "@/components/ChatPanel";
 import TaskList from "@/components/TaskList";
 import OutcomeList from "@/components/OutcomeList";
 import SelectionReply from "@/components/SelectionReply";
+import SearchOverlay from "@/components/SearchOverlay";
 
 type MaintenanceStatus =
   | null
@@ -31,6 +32,18 @@ export default function Home() {
   const [referencedTasks, setReferencedTasks] = useState<Task[]>([]);
   const [referencedOutcomes, setReferencedOutcomes] = useState<OutcomeWithTasks[]>([]);
   const [activeTab, setActiveTab] = useState<"tasks" | "outcomes">("tasks");
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     fetch("/api/tasks")
@@ -159,6 +172,13 @@ export default function Home() {
   return (
     <div className="flex h-screen bg-white">
       <SelectionReply onReply={setQuotedText} />
+      {searchOpen && (
+        <SearchOverlay
+          onClose={() => setSearchOpen(false)}
+          onReference={handleAddReference}
+          outcomeColors={outcomeColors}
+        />
+      )}
 
       {/* Left: chat panel */}
       <div className="flex-1 border-r border-gray-200">
@@ -203,6 +223,16 @@ export default function Home() {
             </button>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="text-gray-400 hover:text-gray-700 transition-colors"
+              title="Search tasks (⌘K)"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="6" cy="6" r="4" />
+                <path d="M9 9L12 12" />
+              </svg>
+            </button>
             <button
               onClick={handleMaintenance}
               disabled={maintenanceRunning}
