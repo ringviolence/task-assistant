@@ -75,7 +75,7 @@ export interface TaskOperation {
   tags?: string[];
   time_horizon?: TimeHorizon;
   status?: Task["status"];
-  outcome_id?: number | null;
+  outcome_id?: number | null | "new";
   // outcome-specific fields
   definition_of_done?: string | null;
   // link / unlink

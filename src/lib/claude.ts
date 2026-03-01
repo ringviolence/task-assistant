@@ -131,7 +131,7 @@ After your conversational response, if any tasks or outcomes need to be created,
 <<<END_TASK_OPS>>>
 
 Task operation rules:
-- "add": requires "title". Optional: "description", "tags" (array), "time_horizon" (${validHorizons}), "outcome_id". Use ONLY for genuinely new tasks — never for tasks that were referenced in the message.
+- "add": requires "title". Optional: "description", "tags" (array), "time_horizon" (${validHorizons}), "outcome_id". Use ONLY for genuinely new tasks — never for tasks that were referenced in the message. When creating a new outcome AND new tasks for it in the same response, set "outcome_id": "new" on the task operations — the system will link them to the newly created outcome automatically.
 - "update": requires "id". Include only the fields to change.
 - "complete": requires "id". Marks a task as done.
 - "delete": requires "id". Permanently removes a task.

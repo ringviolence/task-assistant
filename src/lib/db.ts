@@ -263,11 +263,26 @@ export async function setConfig(key: string, value: string): Promise<void> {
 // ── Operations ─────────────────────────────────────────────────────────────
 
 export async function applyOperations(ops: TaskOperation[], source?: string): Promise<void> {
+  // Pass 1: create_outcome ops first so new tasks can reference the resulting ID
+  let newOutcomeId: number | undefined;
   for (const op of ops) {
+    if (op.op === "create_outcome" && op.title) {
+      const outcome = await createOutcome(op.title, op.definition_of_done, op.description);
+      newOutcomeId = outcome.id;
+    }
+  }
+
+  // Pass 2: everything else — resolve "new" outcome_id placeholder
+  for (const op of ops) {
+    if (op.op === "create_outcome") continue;
+
+    const outcomeId =
+      op.outcome_id === "new" ? (newOutcomeId ?? null) : op.outcome_id;
+
     switch (op.op) {
       case "add":
         if (op.title) {
-          await addTask(op.title, op.description, op.tags, op.time_horizon, source, op.outcome_id);
+          await addTask(op.title, op.description, op.tags, op.time_horizon, source, outcomeId);
         }
         break;
       case "update":
@@ -287,11 +302,6 @@ export async function applyOperations(ops: TaskOperation[], source?: string): Pr
       case "delete":
         if (op.id) await deleteTask(op.id);
         break;
-      case "create_outcome":
-        if (op.title) {
-          await createOutcome(op.title, op.definition_of_done, op.description);
-        }
-        break;
       case "update_outcome":
         if (op.id) {
           await updateOutcome(op.id, {
@@ -309,7 +319,7 @@ export async function applyOperations(ops: TaskOperation[], source?: string): Pr
         break;
       case "link_task": {
         const taskId = op.task_id ?? op.id;
-        if (taskId && op.outcome_id) await linkTask(taskId, op.outcome_id);
+        if (taskId && outcomeId) await linkTask(taskId, outcomeId as number);
         break;
       }
       case "unlink_task": {
