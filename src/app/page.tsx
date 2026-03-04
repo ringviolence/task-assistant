@@ -66,30 +66,25 @@ export default function Home() {
     setReferencedTasks((prev) =>
       prev.some((t) => t.id === task.id) ? prev : [...prev, task]
     );
-    chatPanelRef.current?.focusInput();
   }, []);
 
   const handleRemoveReference = useCallback((id: number) => {
     setReferencedTasks((prev) => prev.filter((t) => t.id !== id));
-    chatPanelRef.current?.focusInput();
   }, []);
 
   const handleAddOutcomeReference = useCallback((outcome: OutcomeWithTasks) => {
     setReferencedOutcomes((prev) =>
       prev.some((o) => o.id === outcome.id) ? prev : [...prev, outcome]
     );
-    chatPanelRef.current?.focusInput();
   }, []);
 
   const handleRemoveOutcomeReference = useCallback((id: number) => {
     setReferencedOutcomes((prev) => prev.filter((o) => o.id !== id));
-    chatPanelRef.current?.focusInput();
   }, []);
 
   const handleEndDiscussion = useCallback(() => {
     setReferencedTasks([]);
     setReferencedOutcomes([]);
-    chatPanelRef.current?.focusInput();
   }, []);
 
   const handleSend = useCallback(
@@ -210,8 +205,8 @@ export default function Home() {
         />
       </div>
 
-      {/* Right: tasks / outcomes panel */}
-      <div className="w-[35%] flex flex-col border-l border-gray-200 bg-white">
+      {/* Right: tasks / outcomes panel — any click here returns focus to the chat input */}
+      <div className="w-[35%] flex flex-col border-l border-gray-200 bg-white" onMouseDown={() => chatPanelRef.current?.focusInput()}>
         {/* Tab bar */}
         <div className="border-b border-gray-200 px-4 flex items-center justify-between shrink-0">
           <div className="flex">
