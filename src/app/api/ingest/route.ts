@@ -8,13 +8,7 @@ const anthropic = new Anthropic();
 
 interface IngestBody {
   source: string;
-  content: string;
-  metadata?: {
-    notes?: string;
-    due_date?: string;
-    url?: string;
-    [key: string]: unknown;
-  };
+  [key: string]: unknown;
 }
 
 export async function POST(request: Request) {
@@ -27,25 +21,11 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (!body.content || typeof body.content !== "string") {
-      return NextResponse.json(
-        { ok: false, error: "content is required" },
-        { status: 400 }
-      );
-    }
 
-    // Build user message
-    let userMessage = `[Incoming task from ${body.source}] ${body.content}.`;
-    if (body.metadata?.notes) {
-      userMessage += ` ${body.metadata.notes}.`;
-    }
-    if (body.metadata?.due_date) {
-      userMessage += ` The source suggests a due date of ${body.metadata.due_date}.`;
-    }
-    if (body.metadata?.url) {
-      userMessage += ` url: ${body.metadata.url}`;
-    }
-    userMessage += " Process this as a new task.";
+    const userMessage =
+      `[Incoming payload from ${body.source}]\n\n` +
+      JSON.stringify(body, null, 2) +
+      "\n\nProcess this as a new task.";
 
     // Build system prompt with source-specific addition
     const basePrompt = await buildSystemPrompt();
