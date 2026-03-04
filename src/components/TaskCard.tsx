@@ -19,7 +19,38 @@ function ChevronDownIcon() {
   );
 }
 
-function ExternalLinkIcon() {
+function GoogleTasksIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+      <circle cx="6.5" cy="6.5" r="6" fill="#1A73E8"/>
+      <path d="M4 6.5L5.8 8.5L9.5 4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function GmailIcon() {
+  return (
+    <svg width="13" height="10" viewBox="0 0 16 12" fill="none">
+      <rect x="0.5" y="0.5" width="15" height="11" rx="1" fill="white" stroke="#DADCE0" strokeWidth="0.75"/>
+      <path d="M0.5 1.5L8 7.5L15.5 1.5" fill="#EA4335"/>
+      <path d="M0.5 1.5V11.5" stroke="#4285F4" strokeWidth="1.75"/>
+      <path d="M15.5 1.5V11.5" stroke="#34A853" strokeWidth="1.75"/>
+    </svg>
+  );
+}
+
+function SlackIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+      <path d="M2 7H6" stroke="#2EB67D" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M8 7H12" stroke="#E01E5A" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M7 2V6" stroke="#ECB22E" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M7 8V12" stroke="#36C5F0" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function ExternalLinkFallbackIcon() {
   return (
     <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
@@ -27,6 +58,15 @@ function ExternalLinkIcon() {
       <path d="M11 1L5.5 6.5" />
     </svg>
   );
+}
+
+function SourceIcon({ source }: { source: string }) {
+  switch (source) {
+    case "google_tasks": return <GoogleTasksIcon />;
+    case "gmail": return <GmailIcon />;
+    case "slack": return <SlackIcon />;
+    default: return <span className="text-gray-400"><ExternalLinkFallbackIcon /></span>;
+  }
 }
 
 export default function TaskCard({
@@ -74,35 +114,37 @@ export default function TaskCard({
           {task.status === "waiting" && (
             <span className="shrink-0 text-xs text-amber-600">waiting</span>
           )}
+        </div>
+
+        {/* Right: source link button + expand button */}
+        <div className="flex items-center shrink-0">
           {task.source_url && (
             <a
               href={task.source_url}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="shrink-0 text-gray-300 hover:text-gray-500 transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded border border-gray-200 hover:border-gray-300 transition-colors"
               title="Open source"
             >
-              <ExternalLinkIcon />
+              <SourceIcon source={task.source} />
             </a>
           )}
-        </div>
-
-        {/* Right: expand button */}
-        <div className="w-7 shrink-0">
-          {hasDetails && (
-            <button
-              onClick={() => setExpanded((v) => !v)}
-              className="flex h-7 w-7 items-center justify-center rounded border border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-700 transition-colors"
-              style={{
-                transform: expanded ? "rotate(180deg)" : "none",
-                transition: "transform 0.15s",
-              }}
-              title={expanded ? "Collapse" : "Expand"}
-            >
-              <ChevronDownIcon />
-            </button>
-          )}
+          <div className="w-7">
+            {hasDetails && (
+              <button
+                onClick={() => setExpanded((v) => !v)}
+                className="flex h-7 w-7 items-center justify-center rounded border border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-700 transition-colors"
+                style={{
+                  transform: expanded ? "rotate(180deg)" : "none",
+                  transition: "transform 0.15s",
+                }}
+                title={expanded ? "Collapse" : "Expand"}
+              >
+                <ChevronDownIcon />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
