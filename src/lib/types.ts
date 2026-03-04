@@ -112,6 +112,16 @@ export interface OutcomesResponse {
   outcomes: OutcomeWithTasks[];
 }
 
+export interface Prompt {
+  key: string;
+  label: string;
+  description: string;
+  sensitivity: "system" | "config" | "casual";
+  value: string;
+  sort_order: number;
+  updated_at: string;
+}
+
 export interface MaintenanceResult {
   shifted: number;
   overdue: number;

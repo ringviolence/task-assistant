@@ -1,20 +1,10 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { applyOperations, getConfig } from "@/lib/db";
+import { applyOperations, getPrompt } from "@/lib/db";
 import { buildSystemPrompt, parseTaskOperations } from "@/lib/claude";
 
 const anthropic = new Anthropic();
 
-// Source-specific instructions appended to the system prompt
-const SOURCE_INSTRUCTIONS: Record<string, string> = {
-  google_tasks:
-    "This task was captured quickly from a phone. The title may be terse. Add it with a reasonable time horizon — if no time indication is given, default to 'soon'. The payload includes a 'url' field — always pass this through as source_url in the add operation.",
-  slack:
-    "This task was captured from a Slack message. Extract the action item and clean up any chat-style language. Default to 'soon' if no timeframe is given.",
-};
-
-const DEFAULT_SOURCE_INSTRUCTION =
-  "This task was captured from an external source. Add it with a reasonable time horizon — if no time indication is given, default to 'soon'.";
 
 interface IngestBody {
   source: string;
@@ -57,14 +47,11 @@ export async function POST(request: Request) {
     }
     userMessage += " Process this as a new task.";
 
-    // Get user context
-    const userContext = await getConfig("user_context");
-
     // Build system prompt with source-specific addition
-    const sourceInstruction =
-      SOURCE_INSTRUCTIONS[body.source] ?? DEFAULT_SOURCE_INSTRUCTION;
-    const systemPrompt =
-      buildSystemPrompt(userContext) + "\n\n## Ingest Context\n" + sourceInstruction;
+    const basePrompt = await buildSystemPrompt();
+    let sourceInstruction = await getPrompt(`source_${body.source}`);
+    if (!sourceInstruction) sourceInstruction = await getPrompt("source_default");
+    const systemPrompt = basePrompt + "\n\n## Ingest Context\n" + sourceInstruction;
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5-20250929",

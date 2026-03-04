@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import type { Task, Outcome, OutcomeWithTasks, TaskOperation, MaintenanceResult } from "./types";
+import type { Task, Outcome, OutcomeWithTasks, TaskOperation, MaintenanceResult, Prompt } from "./types";
 
 function getDb() {
   if (!process.env.DATABASE_URL) {
@@ -261,6 +261,33 @@ export async function setConfig(key: string, value: string): Promise<void> {
     INSERT INTO config (key, value) VALUES (${key}, ${value})
     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
   `;
+}
+
+// ── Prompts ─────────────────────────────────────────────────────────────────
+
+export async function getPrompt(key: string): Promise<string> {
+  const sql = getDb();
+  const rows = await sql`SELECT value FROM prompts WHERE key = ${key}`;
+  return rows.length > 0 ? (rows[0].value as string) : "";
+}
+
+export async function setPrompt(key: string, value: string): Promise<void> {
+  const sql = getDb();
+  await sql`UPDATE prompts SET value = ${value}, updated_at = NOW() WHERE key = ${key}`;
+}
+
+export async function getAllPrompts(): Promise<Prompt[]> {
+  const sql = getDb();
+  const rows = await sql`SELECT * FROM prompts ORDER BY sort_order ASC`;
+  return rows.map((r) => ({
+    key: r.key as string,
+    label: r.label as string,
+    description: r.description as string,
+    sensitivity: r.sensitivity as Prompt["sensitivity"],
+    value: r.value as string,
+    sort_order: r.sort_order as number,
+    updated_at: String(r.updated_at),
+  }));
 }
 
 // ── Operations ─────────────────────────────────────────────────────────────

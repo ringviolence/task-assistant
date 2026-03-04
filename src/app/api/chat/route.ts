@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAllTasks, getAllOutcomes, applyOperations, getConfig } from "@/lib/db";
+import { getAllTasks, getAllOutcomes, applyOperations } from "@/lib/db";
 import { callClaude } from "@/lib/claude";
 import type { ChatRequest, ChatResponse } from "@/lib/types";
 
@@ -14,16 +14,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Get user context
-    const userContext = await getConfig("user_context");
-
-    // 2. Call Claude with message, history, referenced tasks/outcomes, and context
+    // 1. Call Claude with message, history, and referenced tasks/outcomes
     const { reply, operations } = await callClaude(
       body.message,
       body.history ?? [],
       body.referencedTasks ?? [],
       body.referencedOutcomes ?? [],
-      userContext
     );
 
     // 3. Apply any task/outcome operations
