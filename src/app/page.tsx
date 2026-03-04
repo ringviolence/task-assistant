@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import type {
   ChatMessage,
@@ -11,7 +11,7 @@ import type {
   OutcomesResponse,
   MaintenanceResult,
 } from "@/lib/types";
-import ChatPanel from "@/components/ChatPanel";
+import ChatPanel, { type ChatPanelHandle } from "@/components/ChatPanel";
 import TaskList from "@/components/TaskList";
 import OutcomeList from "@/components/OutcomeList";
 import SelectionReply from "@/components/SelectionReply";
@@ -33,6 +33,7 @@ export default function Home() {
   const [referencedOutcomes, setReferencedOutcomes] = useState<OutcomeWithTasks[]>([]);
   const [activeTab, setActiveTab] = useState<"tasks" | "outcomes">("tasks");
   const [searchOpen, setSearchOpen] = useState(false);
+  const chatPanelRef = useRef<ChatPanelHandle>(null);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -65,25 +66,30 @@ export default function Home() {
     setReferencedTasks((prev) =>
       prev.some((t) => t.id === task.id) ? prev : [...prev, task]
     );
+    chatPanelRef.current?.focusInput();
   }, []);
 
   const handleRemoveReference = useCallback((id: number) => {
     setReferencedTasks((prev) => prev.filter((t) => t.id !== id));
+    chatPanelRef.current?.focusInput();
   }, []);
 
   const handleAddOutcomeReference = useCallback((outcome: OutcomeWithTasks) => {
     setReferencedOutcomes((prev) =>
       prev.some((o) => o.id === outcome.id) ? prev : [...prev, outcome]
     );
+    chatPanelRef.current?.focusInput();
   }, []);
 
   const handleRemoveOutcomeReference = useCallback((id: number) => {
     setReferencedOutcomes((prev) => prev.filter((o) => o.id !== id));
+    chatPanelRef.current?.focusInput();
   }, []);
 
   const handleEndDiscussion = useCallback(() => {
     setReferencedTasks([]);
     setReferencedOutcomes([]);
+    chatPanelRef.current?.focusInput();
   }, []);
 
   const handleSend = useCallback(
@@ -167,6 +173,13 @@ export default function Home() {
     }
   }, []);
 
+  // When the search overlay closes, return focus to the chat input.
+  // This covers the case where the overlay's own input had focus and the
+  // overlay unmounts, which would otherwise leave focus on document.body.
+  useEffect(() => {
+    if (!searchOpen) chatPanelRef.current?.focusInput();
+  }, [searchOpen]);
+
   const handleQuoteConsumed = useCallback(() => setQuotedText(null), []);
 
   return (
@@ -183,6 +196,7 @@ export default function Home() {
       {/* Left: chat panel */}
       <div className="flex-1 border-r border-gray-200">
         <ChatPanel
+          ref={chatPanelRef}
           messages={messages}
           onSend={handleSend}
           loading={loading}

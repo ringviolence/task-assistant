@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import type { ChatMessage as ChatMessageType, Task, OutcomeWithTasks } from "@/lib/types";
 import ChatMessage from "./ChatMessage";
 
@@ -17,7 +17,11 @@ interface ChatPanelProps {
   onEndDiscussion: () => void;
 }
 
-export default function ChatPanel({
+export interface ChatPanelHandle {
+  focusInput: () => void;
+}
+
+const ChatPanel = forwardRef<ChatPanelHandle, ChatPanelProps>(function ChatPanel({
   messages,
   onSend,
   loading,
@@ -28,9 +32,13 @@ export default function ChatPanel({
   referencedOutcomes,
   onRemoveOutcomeReference,
   onEndDiscussion,
-}: ChatPanelProps) {
+}, ref) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    focusInput: () => inputRef.current?.focus(),
+  }));
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -173,4 +181,6 @@ export default function ChatPanel({
       </form>
     </div>
   );
-}
+});
+
+export default ChatPanel;
