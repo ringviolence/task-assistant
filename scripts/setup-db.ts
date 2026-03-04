@@ -91,6 +91,9 @@ async function setup() {
   await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS outcome_id INTEGER`;
   console.log("✓ tasks.outcome_id column ready");
 
+  await sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source_url TEXT`;
+  console.log("✓ tasks.source_url column ready");
+
   console.log("\nDatabase setup complete.");
 }
 

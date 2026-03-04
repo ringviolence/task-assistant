@@ -8,7 +8,7 @@ const anthropic = new Anthropic();
 // Source-specific instructions appended to the system prompt
 const SOURCE_INSTRUCTIONS: Record<string, string> = {
   google_tasks:
-    "This task was captured quickly from a phone. The title may be terse. Add it with a reasonable time horizon — if no time indication is given, default to 'soon'.",
+    "This task was captured quickly from a phone. The title may be terse. Add it with a reasonable time horizon — if no time indication is given, default to 'soon'. The payload includes a 'url' field — always pass this through as source_url in the add operation.",
   slack:
     "This task was captured from a Slack message. Extract the action item and clean up any chat-style language. Default to 'soon' if no timeframe is given.",
 };
@@ -22,6 +22,7 @@ interface IngestBody {
   metadata?: {
     notes?: string;
     due_date?: string;
+    url?: string;
     [key: string]: unknown;
   };
 }
@@ -50,6 +51,9 @@ export async function POST(request: Request) {
     }
     if (body.metadata?.due_date) {
       userMessage += ` The source suggests a due date of ${body.metadata.due_date}.`;
+    }
+    if (body.metadata?.url) {
+      userMessage += ` url: ${body.metadata.url}`;
     }
     userMessage += " Process this as a new task.";
 

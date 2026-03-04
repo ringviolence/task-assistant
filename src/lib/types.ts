@@ -20,6 +20,7 @@ export interface Task {
   time_horizon: TimeHorizon;
   status: "active" | "done" | "waiting";
   source: string;
+  source_url: string | null;
   outcome_id: number | null;
   created_at: string;
   updated_at: string;
@@ -76,6 +77,7 @@ export interface TaskOperation {
   time_horizon?: TimeHorizon;
   status?: Task["status"];
   outcome_id?: number | null | "new";
+  source_url?: string | null;
   // outcome-specific fields
   definition_of_done?: string | null;
   // link / unlink

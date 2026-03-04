@@ -19,6 +19,16 @@ function ChevronDownIcon() {
   );
 }
 
+function ExternalLinkIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7" />
+      <path d="M8 1h3v3" />
+      <path d="M11 1L5.5 6.5" />
+    </svg>
+  );
+}
+
 export default function TaskCard({
   task,
   outcomeColor,
@@ -53,16 +63,28 @@ export default function TaskCard({
         </div>
 
         {/* Center: title */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex items-center gap-1.5">
           <span
-            className={`text-sm leading-snug ${
+            className={`text-sm leading-snug min-w-0 truncate ${
               isDone ? "line-through text-gray-400" : "text-gray-800"
             }`}
           >
             {task.title}
           </span>
           {task.status === "waiting" && (
-            <span className="ml-2 text-xs text-amber-600">waiting</span>
+            <span className="shrink-0 text-xs text-amber-600">waiting</span>
+          )}
+          {task.source_url && (
+            <a
+              href={task.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="shrink-0 text-gray-300 hover:text-gray-500 transition-colors"
+              title="Open source"
+            >
+              <ExternalLinkIcon />
+            </a>
           )}
         </div>
 

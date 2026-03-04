@@ -19,6 +19,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     time_horizon: row.time_horizon as Task["time_horizon"],
     status: row.status as Task["status"],
     source: (row.source as string | null) ?? "chat",
+    source_url: (row.source_url as string | null) ?? null,
     outcome_id: (row.outcome_id as number | null) ?? null,
     created_at: created instanceof Date ? created.toISOString() : String(created),
     updated_at: updated instanceof Date ? updated.toISOString() : String(updated),
@@ -72,18 +73,20 @@ export async function addTask(
   tags?: string[],
   time_horizon?: Task["time_horizon"],
   source?: string,
-  outcome_id?: number | null
+  outcome_id?: number | null,
+  source_url?: string | null
 ): Promise<Task> {
   const sql = getDb();
   const rows = await sql`
-    INSERT INTO tasks (title, description, tags, time_horizon, source, outcome_id)
+    INSERT INTO tasks (title, description, tags, time_horizon, source, outcome_id, source_url)
     VALUES (
       ${title},
       ${description ?? null},
       ${JSON.stringify(tags ?? [])},
       ${time_horizon ?? "later"},
       ${source ?? "chat"},
-      ${outcome_id ?? null}
+      ${outcome_id ?? null},
+      ${source_url ?? null}
     )
     RETURNING *
   `;
@@ -282,7 +285,7 @@ export async function applyOperations(ops: TaskOperation[], source?: string): Pr
     switch (op.op) {
       case "add":
         if (op.title) {
-          await addTask(op.title, op.description, op.tags, op.time_horizon, source, outcomeId);
+          await addTask(op.title, op.description, op.tags, op.time_horizon, source, outcomeId, op.source_url);
         }
         break;
       case "update":
